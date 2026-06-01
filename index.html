@@ -137,16 +137,16 @@
       <input id="search" type="search" placeholder="Search by date, title, reagent, tag..." aria-label="Search notes">
     </div>
     <main class="list" id="list">
-      <a class="note" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html">
+      <a class="note" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v2">
     <span class="date">2026-06-01</span>
-    <span class="title">XPhos/NaOt-Bu Buchwald-Hartwig C-N coupling 再検討</span>
-    <span class="subtitle">Pd2dba3/XPhos, NaOt-Bu, toluene; reaction 1 rerun</span>
+    <span class="title">XPhos/KOt-Bu Buchwald-Hartwig C-N coupling 再検討</span>
+    <span class="subtitle">Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun</span>
     <span class="row">
       <span class="status">planned</span>
-      <span class="tags"><span class="tag">Buchwald-Hartwig</span><span class="tag">XPhos</span><span class="tag">NaOt-Bu</span><span class="tag">C-N coupling</span></span>
+      <span class="tags"><span class="tag">Buchwald-Hartwig</span><span class="tag">XPhos</span><span class="tag">KOt-Bu</span><span class="tag">C-N coupling</span></span>
     </span>
   </a>
-<a class="note" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html">
+<a class="note" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v2">
     <span class="date">2026-06-01</span>
     <span class="title">Thiol sulfonate substitution</span>
     <span class="subtitle">sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h</span>
@@ -155,7 +155,7 @@
       <span class="tags"><span class="tag">thiol</span><span class="tag">sulfonate</span><span class="tag">DMF</span><span class="tag">cyanine</span></span>
     </span>
   </a>
-<a class="note" href="notes/2026-05-29_buchwald_c_n_coupling/index.html">
+<a class="note" href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-storage-key="experimental-note:2026-05-29-buchwald:v2">
     <span class="date">2026-05-29</span>
     <span class="title">Buchwald-Hartwig C-N coupling 検討</span>
     <span class="subtitle">Pd2dba3/BINAP, KOt-Bu, toluene</span>
@@ -170,6 +170,17 @@
   <script>
     const search = document.getElementById("search");
     const notes = [...document.querySelectorAll(".note")];
+    for (const note of notes) {
+      const key = note.dataset.storageKey;
+      if (!key) continue;
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        const savedTitle = saved?.title || saved?.editable?.[0]?.replace(/<[^>]*>/g, "").trim() || saved?.values?.[0]?.html?.replace(/<[^>]*>/g, "").trim();
+        if (savedTitle) note.querySelector(".title").textContent = savedTitle;
+      } catch {
+        // Ignore malformed local edits.
+      }
+    }
     search.addEventListener("input", () => {
       const q = search.value.trim().toLowerCase();
       for (const note of notes) {
