@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-  <title>Dynamic Experimental Note</title>
+  <title>Experimental Note</title>
   <style>
     :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --soft:#eaf3f7; }
     * { box-sizing:border-box; }
@@ -26,6 +26,10 @@
     a { color:var(--accent); font-weight:750; text-decoration:none; }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .layout { display:grid; grid-template-columns:280px 1fr; gap:14px; }
+    body.note-view .layout { grid-template-columns:1fr; }
+    body.note-view aside { display:none; }
+    body.note-view #connectPanel { display:none; }
+    body.note-view #editorHeading { display:none; }
     .list { display:grid; gap:8px; }
     .note-card { padding:12px; display:grid; gap:5px; cursor:pointer; }
     .note-card:hover { border-color:var(--accent); }
@@ -52,12 +56,12 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Dynamic Experimental Note</h1>
-      <p class="muted">Google Sheetsに保存する汎用合成実験ノート。新規作成、編集、アーカイブ、試薬量計算、画像貼付に対応。</p>
+      <h1 id="pageTitle">Experimental Note</h1>
+      <p class="muted" id="pageLead">Google Sheetsに保存する合成実験ノート。</p>
       <div class="row"><a href="../index.html">Top page</a></div>
     </header>
 
-    <section class="panel">
+    <section class="panel" id="connectPanel">
       <h2>接続</h2>
       <label>Apps Script Web App URL
         <input id="endpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec">
@@ -71,13 +75,13 @@
     </section>
 
     <div class="layout">
-      <aside class="panel">
+      <aside class="panel" id="noteAside">
         <h2>ノート一覧</h2>
         <div class="list" id="noteList"></div>
       </aside>
 
       <main class="panel" id="editor">
-        <h2>ノート編集</h2>
+        <h2 id="editorHeading">ノート編集</h2>
         <div class="grid">
           <label>日付<input id="date" type="date"></label>
           <label>反応方法<input id="method" placeholder="Buchwald-Hartwig coupling"></label>
@@ -142,11 +146,13 @@
     const q = s => document.querySelector(s);
     const msg = text => q("#msg").textContent = text;
     const state = { notes: [], currentId: "" };
+    const requestedNoteId = new URLSearchParams(location.search).get("note_id");
     const defaultReagents = () => [
       { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
       { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
     ];
     q("#endpoint").value = localStorage.getItem(ENDPOINT_KEY) || "";
+    if (requestedNoteId && endpoint()) document.body.classList.add("note-view");
     function endpoint() { return q("#endpoint").value.trim() || localStorage.getItem(ENDPOINT_KEY) || ""; }
     function today() { return new Date().toLocaleDateString("sv-SE"); }
     function id() { return "note-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
@@ -194,6 +200,11 @@
     function setEditor(data){
       state.currentId=data.note_id;
       ["date","method","product","title","subtitle","status","scale","conc","solvent","procedure","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
+      const shownTitle = data.title || [data.method, data.product].filter(Boolean).join(": ") || "Experimental Note";
+      document.title = shownTitle;
+      q("#pageTitle").textContent = shownTitle;
+      q("#pageLead").textContent = data.subtitle || [data.method, data.product].filter(Boolean).join(": ") || "Google Sheetsに保存する合成実験ノート。";
+      if (requestedNoteId && endpoint()) document.body.classList.add("note-view");
       q("#schemePreview").hidden=!data.scheme; q("#schemePreview").src=data.scheme||"";
       renderReagents(data.reagents||defaultReagents());
       renderImages(data.images||[]);
