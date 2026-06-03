@@ -69,6 +69,7 @@
           <label>状態<select id="status"><option value="ongoing">進行中</option><option value="completed">終了</option><option value="hold">保留</option></select></label>
         </div>
         <label>タイトル<input id="title" readonly placeholder="反応方法: 目的生成物"></label>
+        <label>Keywords<input id="keywords" placeholder="Buchwald, thiol, cyanine など。カンマ区切り"></label>
         <label>サブタイトル<input id="subtitle" placeholder="reagents, solvent, condition"></label>
 
         <section>
@@ -102,7 +103,16 @@
           </div>
         </section>
 
-        <label>操作<textarea id="procedure" placeholder="1. dry flask..."></textarea></label>
+        <section>
+          <h3>操作</h3>
+          <div class="row"><button id="addOperation" type="button">操作行追加</button></div>
+          <div class="table-scroll">
+            <table id="operationTable">
+              <thead><tr><th>日付</th><th>時刻</th><th>操作</th><th>削除</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
         <label>観察・MS候補<textarea id="analysis" placeholder="m/z, UV-vis, TLCなど"></textarea></label>
         <label>メモ<textarea id="memo"></textarea></label>
 
@@ -144,7 +154,7 @@
       return [method, product].filter(Boolean).join(": ") || "Synthesis Experiment Note";
     }
     function idFromFields() {
-      return [q("#date").value || today(), slug(q("#method").value), slug(q("#product").value)].filter(Boolean).join("-") + "-" + Math.random().toString(36).slice(2,6);
+      return [q("#date").value || today(), slug(q("#method").value), slug(q("#product").value)].filter(Boolean).join("-") + "-" + Math.random().toString(36).slice(2,5);
     }
     function fmt(n,d=3){ if(!Number.isFinite(n)) return ""; if(Math.abs(n)>=100) return n.toFixed(1); if(Math.abs(n)>=10) return n.toFixed(2); return n.toFixed(d).replace(/0+$/,"").replace(/\.$/,""); }
     function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
@@ -183,11 +193,11 @@
       });
     }
     function blankNote(){
-      return { note_id:"", date:today(), method:"", product:"", title:"", subtitle:"", status:"ongoing", scale:"0.100", conc:"0.05", solvent:"toluene", scheme:"", reagents:defaultReagents(), procedure:"", analysis:"", memo:"", images:[] };
+      return { note_id:"", date:today(), method:"", product:"", title:"", keywords:"", subtitle:"", status:"ongoing", scale:"0.100", conc:"0.05", solvent:"toluene", scheme:"", reagents:defaultReagents(), operations:[{date:"", time:"", text:""}], analysis:"", memo:"", images:[] };
     }
     function setEditor(data){
       state.currentId=data.note_id;
-      ["date","method","product","title","subtitle","status","scale","conc","solvent","procedure","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
+      ["date","method","product","title","keywords","subtitle","status","scale","conc","solvent","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
       q("#title").value = data.title || titleFromFields(data.method, data.product);
       const shownTitle = q("#title").value || "Synthesis Experiment Note";
       document.title = shownTitle;
@@ -196,13 +206,14 @@
       if (requestedNoteId && endpoint()) document.body.classList.add("note-view");
       q("#schemePreview").hidden=!data.scheme; q("#schemePreview").src=data.scheme||"";
       renderReagents(data.reagents||defaultReagents());
+      renderOperations(data.operations || (data.procedure ? [{date:"", time:"", text:data.procedure}] : [{date:"", time:"", text:""}]));
       renderImages(data.images||[]);
       recalc();
     }
     function collect(){
       const title = titleFromFields();
       q("#title").value = title;
-      return { note_id:state.currentId||idFromFields(), date:q("#date").value, method:q("#method").value, product:q("#product").value, title, subtitle:q("#subtitle").value, status:q("#status").value, scale:q("#scale").value, conc:q("#conc").value, solvent:q("#solvent").value, scheme:q("#schemePreview").src && !q("#schemePreview").hidden ? q("#schemePreview").src : "", reagents:readReagents(), procedure:q("#procedure").value, analysis:q("#analysis").value, memo:q("#memo").value, images:[...q("#images").querySelectorAll("img")].map(img=>img.src) };
+      return { note_id:state.currentId||idFromFields(), date:q("#date").value, method:q("#method").value, product:q("#product").value, title, keywords:q("#keywords").value, subtitle:q("#subtitle").value, status:q("#status").value, scale:q("#scale").value, conc:q("#conc").value, solvent:q("#solvent").value, scheme:q("#schemePreview").src && !q("#schemePreview").hidden ? q("#schemePreview").src : "", reagents:readReagents(), operations:readOperations(), analysis:q("#analysis").value, memo:q("#memo").value, images:[...q("#images").querySelectorAll("img")].map(img=>img.src) };
     }
     function renderReagents(rows){
       q("#reagentTable tbody").innerHTML = rows.map((r,i)=>`<tr>
@@ -216,6 +227,15 @@
       </tr>`).join("");
     }
     function readReagents(){ return [...q("#reagentTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el=>[el.dataset.k,el.value]))); }
+    function renderOperations(rows){
+      q("#operationTable tbody").innerHTML = rows.map((r,i)=>`<tr>
+        <td><input data-op="date" type="date" value="${escapeAttr(r.date||"")}"></td>
+        <td><input data-op="time" type="time" value="${escapeAttr(r.time||"")}"></td>
+        <td><textarea data-op="text" placeholder="操作内容">${escapeAttr(r.text||"")}</textarea></td>
+        <td><button type="button" data-op-del="${i}">削除</button></td>
+      </tr>`).join("");
+    }
+    function readOperations(){ return [...q("#operationTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-op]")].map(el=>[el.dataset.op,el.value]))); }
     function recalc(){
       const scale=Number(q("#scale").value||0), conc=Number(q("#conc").value||0);
       q("#solventVol").value = conc ? `${fmt(scale/conc,2)} mL` : "";
@@ -239,7 +259,7 @@
     }
     async function saveCurrent(){
       const data=collect(); state.currentId=data.note_id;
-      await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, status:data.status, archived:false, updated_at:new Date().toISOString()});
+      await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, archived:false, updated_at:new Date().toISOString()});
       await post({kind:"edit", note_id:data.note_id, payload:data, updated_at:new Date().toISOString()});
       msg("保存リクエストを送りました");
     }
@@ -247,8 +267,10 @@
     q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); state.currentId=""; loadNotes(); };
     q("#reagentTable").oninput=recalc;
     q("#reagentTable").onclick=e=>{ const b=e.target.closest("[data-del]"); if(!b) return; b.closest("tr").remove(); recalc(); };
+    q("#operationTable").onclick=e=>{ const b=e.target.closest("[data-op-del]"); if(!b) return; b.closest("tr").remove(); };
     q("#addReagent").onclick=()=>{ const rows=readReagents(); rows.push({name:"",role:"reagent",mw:"",eq:"1",unit:"eq",density:""}); renderReagents(rows); recalc(); };
     q("#addSolvent").onclick=()=>{ const rows=readReagents(); rows.push({name:"",role:"liquid reagent",mw:"",eq:"1",unit:"eq",density:""}); renderReagents(rows); recalc(); };
+    q("#addOperation").onclick=()=>{ const rows=readOperations(); rows.push({date:"",time:"",text:""}); renderOperations(rows); };
     ["scale","conc","solvent"].forEach(id=>q("#"+id).addEventListener("input",recalc));
     ["method","product"].forEach(id=>q("#"+id).addEventListener("input",()=>{ q("#title").value=titleFromFields(); if(!requestedNoteId) q("#pageTitle").textContent=q("#title").value; }));
     q("#schemeFile").onchange=e=>addFiles(e.target.files,"scheme");

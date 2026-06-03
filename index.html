@@ -70,6 +70,12 @@
     button:hover, .open-note:hover {
       border-color: var(--accent);
     }
+    .new-note-button {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+      white-space: nowrap;
+    }
     .list {
       display: grid;
       gap: 10px;
@@ -91,6 +97,7 @@
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
+      cursor: pointer;
     }
     .note:hover {
       border-color: var(--accent);
@@ -232,7 +239,7 @@
     <div class="tools">
       <input id="search" type="search" placeholder="Search by date, title, reagent, tag..." aria-label="Search notes">
       <button type="button" id="load-sheet-status">Sheets再読込</button>
-      <a class="open-note" href="dynamic_note_app/index.html">New note</a>
+      <a class="open-note new-note-button" href="dynamic_note_app/index.html">新規 合成実験ノート</a>
     </div>
     <details class="section">
       <summary>Sheets settings</summary>
@@ -263,7 +270,6 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
-      <a class="open-note" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html">Open</a>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
@@ -278,7 +284,6 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
-      <a class="open-note" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html">Open</a>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
@@ -293,7 +298,6 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
-      <a class="open-note" href="notes/2026-05-29_buchwald_c_n_coupling/index.html">Open</a>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
@@ -453,19 +457,20 @@
         '<span class="subtitle"></span>' +
         '<span class="row">' +
           '<span class="status">進行中</span>' +
-          '<span class="tags"><span class="tag">Sheets note</span></span>' +
+          '<span class="tags"></span>' +
         '</span>' +
         '<span class="complete-summary" hidden></span>' +
         '<span class="actions">' +
-          '<a class="open-note">Open</a>' +
+          '<button class="delete-button" type="button">削除</button>' +
           '<button class="finish-button" type="button">終了登録</button>' +
           '<button class="reopen-button" type="button" hidden>進行中に戻す</button>' +
         '</span>';
-      note.querySelector(".date").textContent = row.date || "";
+      note.querySelector(".date").textContent = formatDateOnly(row.date || "");
       note.querySelector(".title").textContent = row.title || "(untitled)";
       note.querySelector(".title").href = href;
       note.querySelector(".subtitle").textContent = row.subtitle || [row.method, row.product].filter(Boolean).join(": ");
-      note.querySelector(".open-note").href = href;
+      const tags = String(row.keywords || "").split(/[,、\s]+/).map(tag => tag.trim()).filter(Boolean);
+      note.querySelector(".tags").innerHTML = (tags.length ? tags : ["Sheets note"]).map(tag => '<span class="tag">' + escapeHtmlClient(tag) + '</span>').join("");
       note.querySelector(".finish-button").addEventListener("click", () => {
         activeNote = note;
         const record = state[statusId(note)] || {};
@@ -482,7 +487,29 @@
         setNoteStatus(note);
         applySearch();
       });
+      note.querySelector(".delete-button").addEventListener("click", event => {
+        event.stopPropagation();
+        if (!confirm("このノートを削除/アーカイブします。よろしいですか？")) return;
+        postNoteArchive(row, true);
+        note.remove();
+        const index = notes.indexOf(note);
+        if (index >= 0) notes.splice(index, 1);
+        applySearch();
+      });
       return note;
+    }
+
+    function formatDateOnly(value) {
+      const text = String(value || "").trim();
+      const iso = text.match(/\d{4}-\d{2}-\d{2}/);
+      if (iso) return iso[0];
+      const parsed = new Date(text);
+      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString("sv-SE");
+      return text;
+    }
+
+    function escapeHtmlClient(value) {
+      return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     }
 
     function loadDynamicNotesFromSheets() {
@@ -516,6 +543,28 @@
       fetch(endpoint, { method: "POST", mode: "no-cors", body: JSON.stringify(record) }).catch(() => {});
     }
 
+    function postNoteArchive(row, archived) {
+      const endpoint = sheetEndpoint();
+      if (!endpoint) return;
+      fetch(endpoint, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({
+          kind: "note",
+          note_id: row.note_id,
+          date: row.date || "",
+          title: row.title || "",
+          subtitle: row.subtitle || "",
+          method: row.method || "",
+          product: row.product || "",
+          keywords: row.keywords || "",
+          status: row.status || "ongoing",
+          archived,
+          updated_at: new Date().toISOString()
+        })
+      }).catch(() => {});
+    }
+
     template.replaceWith(...template.content.childNodes);
     const notes = [...document.querySelectorAll(".note")];
     for (const note of notes) {
@@ -546,6 +595,13 @@
         applySearch();
       });
       setNoteStatus(note);
+    }
+    for (const note of notes) {
+      note.addEventListener("click", event => {
+        if (event.target.closest("button,a")) return;
+        const href = note.dataset.href;
+        if (href) location.href = href;
+      });
     }
     finishCancel.addEventListener("click", () => dialog.close());
     form.addEventListener("submit", (event) => {
