@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>Dynamic Experimental Note</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --soft:#eaf3f7; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; line-height:1.55; }
+    .wrap { width:min(1100px, calc(100% - 28px)); margin:24px auto; display:grid; gap:14px; }
+    header,.panel,.note-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header { border-top:5px solid var(--accent); padding:22px 24px; }
+    h1 { margin:0 0 6px; font-size:25px; }
+    h2 { margin:0 0 10px; font-size:18px; }
+    h3 { margin:0 0 8px; font-size:15px; }
+    .muted,.msg { color:var(--muted); font-size:13px; }
+    .panel { padding:16px; display:grid; gap:12px; }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    label { display:grid; gap:4px; color:var(--muted); font-size:13px; }
+    input,textarea,select,button { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; font:inherit; background:#fff; }
+    textarea { min-height:92px; resize:vertical; }
+    button { width:auto; color:var(--accent); font-weight:750; cursor:pointer; }
+    button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    a { color:var(--accent); font-weight:750; text-decoration:none; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .layout { display:grid; grid-template-columns:280px 1fr; gap:14px; }
+    .list { display:grid; gap:8px; }
+    .note-card { padding:12px; display:grid; gap:5px; cursor:pointer; }
+    .note-card:hover { border-color:var(--accent); }
+    .note-card.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(36,92,122,.12); }
+    .date { color:var(--accent); font-weight:750; font-variant-numeric:tabular-nums; font-size:13px; }
+    .drop { border:2px dashed var(--line); border-radius:8px; padding:16px; text-align:center; color:var(--muted); background:#fbfcfd; }
+    .drop.drag { border-color:var(--accent); background:var(--soft); }
+    .image-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .image-grid img,.scheme-preview { width:100%; max-height:240px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
+    th { background:#f6f8fa; color:var(--muted); font-size:12px; text-align:left; }
+    td input,td select { border:0; padding:4px; min-width:80px; }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .table-scroll { overflow:auto; }
+    @media (max-width:800px) {
+      .wrap { width:100%; margin:0; }
+      header,.panel { border-left:0; border-right:0; border-radius:0; }
+      .layout,.grid { grid-template-columns:1fr; }
+      .row button,.row a { flex:1 1 auto; text-align:center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Dynamic Experimental Note</h1>
+      <p class="muted">Google Sheetsに保存する汎用合成実験ノート。新規作成、編集、アーカイブ、試薬量計算、画像貼付に対応。</p>
+      <div class="row"><a href="../index.html">Top page</a><a href="../sheet_sync_test/index.html">Sheets sync test</a></div>
+    </header>
+
+    <section class="panel">
+      <h2>接続</h2>
+      <label>Apps Script Web App URL
+        <input id="endpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+      </label>
+      <div class="row">
+        <button id="saveEndpoint" type="button">URL保存</button>
+        <button id="reloadNotes" type="button">ノート一覧再読込</button>
+        <button class="primary" id="newNote" type="button">新規ノート</button>
+      </div>
+      <div class="msg" id="msg"></div>
+    </section>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2>ノート一覧</h2>
+        <div class="list" id="noteList"></div>
+      </aside>
+
+      <main class="panel" id="editor">
+        <h2>ノート編集</h2>
+        <div class="grid">
+          <label>日付<input id="date" type="date"></label>
+          <label>反応方法<input id="method" placeholder="Buchwald-Hartwig coupling"></label>
+          <label>目的生成物<input id="product" placeholder="m346"></label>
+          <label>状態<select id="status"><option value="ongoing">進行中</option><option value="completed">終了</option><option value="hold">保留</option></select></label>
+        </div>
+        <label>タイトル<input id="title" placeholder="反応方法: 目的生成物"></label>
+        <label>サブタイトル<input id="subtitle" placeholder="reagents, solvent, condition"></label>
+
+        <section>
+          <h3>反応スキーム</h3>
+          <div class="drop" id="schemeDrop">画像をドラッグ、ペースト、またはファイル選択</div>
+          <input id="schemeFile" type="file" accept="image/*">
+          <img class="scheme-preview" id="schemePreview" alt="" hidden>
+        </section>
+
+        <section>
+          <h3>計算条件</h3>
+          <div class="grid">
+            <label>基準基質 mmol<input id="scale" type="number" step="0.001" value="0.100"></label>
+            <label>溶液濃度 M<input id="conc" type="number" step="0.01" value="0.05"></label>
+            <label>溶媒名<input id="solvent" value="toluene"></label>
+            <label>溶媒量<input id="solventVol" readonly></label>
+          </div>
+        </section>
+
+        <section>
+          <h3>試薬表</h3>
+          <div class="row">
+            <button id="addReagent" type="button">試薬追加</button>
+            <button id="addSolvent" type="button">溶媒/液体追加</button>
+          </div>
+          <div class="table-scroll">
+            <table id="reagentTable">
+              <thead><tr><th>名称</th><th>役割</th><th>MW</th><th>eq/mol%</th><th>単位</th><th>密度 g/mL</th><th>mmol</th><th>秤量/容量</th><th>削除</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <label>操作<textarea id="procedure" placeholder="1. dry flask..."></textarea></label>
+        <label>観察・MS候補<textarea id="analysis" placeholder="m/z, UV-vis, TLCなど"></textarea></label>
+        <label>メモ<textarea id="memo"></textarea></label>
+
+        <section>
+          <h3>画像メモ</h3>
+          <div class="drop" id="imageDrop">画像をドラッグ、ペースト、またはファイル選択</div>
+          <input id="imageFile" type="file" accept="image/*" multiple>
+          <div class="image-grid" id="images"></div>
+        </section>
+
+        <div class="row">
+          <button class="primary" id="saveNote" type="button">Save to Sheets</button>
+          <button id="archiveNote" type="button">アーカイブ</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const q = s => document.querySelector(s);
+    const msg = text => q("#msg").textContent = text;
+    const state = { notes: [], currentId: "" };
+    const defaultReagents = () => [
+      { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
+      { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
+    ];
+    q("#endpoint").value = localStorage.getItem(ENDPOINT_KEY) || "";
+    function endpoint() { return q("#endpoint").value.trim() || localStorage.getItem(ENDPOINT_KEY) || ""; }
+    function today() { return new Date().toLocaleDateString("sv-SE"); }
+    function id() { return "note-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
+    function fmt(n,d=3){ if(!Number.isFinite(n)) return ""; if(Math.abs(n)>=100) return n.toFixed(1); if(Math.abs(n)>=10) return n.toFixed(2); return n.toFixed(d).replace(/0+$/,"").replace(/\.$/,""); }
+    function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
+    function jsonp(params, cb){
+      const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
+      const name="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      window[name]=data=>{ cb(data); script.remove(); delete window[name]; };
+      const script=document.createElement("script");
+      script.src=url+"?"+new URLSearchParams({...params,callback:name}).toString();
+      script.onerror=()=>{ msg("Sheets読込失敗"); delete window[name]; };
+      document.body.append(script);
+    }
+    function renderList(){
+      q("#noteList").innerHTML = state.notes.map(n => `<article class="note-card ${n.note_id===state.currentId?"active":""}" data-id="${n.note_id}">
+        <span class="date">${n.date||""}</span><strong>${n.title||"(untitled)"}</strong><span class="muted">${n.subtitle||""}</span>
+      </article>`).join("");
+    }
+    function loadNotes(){ jsonp({kind:"notes"}, rows=>{ state.notes=rows||[]; renderList(); msg("ノート一覧を読み込みました"); }); }
+    function blankNote(){
+      const note_id=id();
+      return { note_id, date:today(), method:"", product:"", title:"", subtitle:"", status:"ongoing", scale:"0.100", conc:"0.05", solvent:"toluene", scheme:"", reagents:defaultReagents(), procedure:"", analysis:"", memo:"", images:[] };
+    }
+    function setEditor(data){
+      state.currentId=data.note_id;
+      ["date","method","product","title","subtitle","status","scale","conc","solvent","procedure","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
+      q("#schemePreview").hidden=!data.scheme; q("#schemePreview").src=data.scheme||"";
+      renderReagents(data.reagents||defaultReagents());
+      renderImages(data.images||[]);
+      recalc();
+      renderList();
+    }
+    function collect(){
+      return { note_id:state.currentId||id(), date:q("#date").value, method:q("#method").value, product:q("#product").value, title:q("#title").value || `${q("#method").value}: ${q("#product").value}`.replace(/^: |: $/g,""), subtitle:q("#subtitle").value, status:q("#status").value, scale:q("#scale").value, conc:q("#conc").value, solvent:q("#solvent").value, scheme:q("#schemePreview").src && !q("#schemePreview").hidden ? q("#schemePreview").src : "", reagents:readReagents(), procedure:q("#procedure").value, analysis:q("#analysis").value, memo:q("#memo").value, images:[...q("#images").querySelectorAll("img")].map(img=>img.src) };
+    }
+    function renderReagents(rows){
+      q("#reagentTable tbody").innerHTML = rows.map((r,i)=>`<tr>
+        <td><input data-k="name" value="${escapeAttr(r.name||"")}"></td>
+        <td><input data-k="role" value="${escapeAttr(r.role||"")}"></td>
+        <td><input data-k="mw" type="number" step="0.01" value="${escapeAttr(r.mw||"")}"></td>
+        <td><input data-k="eq" type="number" step="0.001" value="${escapeAttr(r.eq||"")}"></td>
+        <td><select data-k="unit"><option value="eq" ${r.unit!=="mol%"?"selected":""}>eq</option><option value="mol%" ${r.unit==="mol%"?"selected":""}>mol%</option></select></td>
+        <td><input data-k="density" type="number" step="0.001" value="${escapeAttr(r.density||"")}"></td>
+        <td class="num mmol"></td><td class="num amount"></td><td><button type="button" data-del="${i}">削除</button></td>
+      </tr>`).join("");
+    }
+    function readReagents(){ return [...q("#reagentTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el=>[el.dataset.k,el.value]))); }
+    function recalc(){
+      const scale=Number(q("#scale").value||0), conc=Number(q("#conc").value||0);
+      q("#solventVol").value = conc ? `${fmt(scale/conc,2)} mL` : "";
+      [...q("#reagentTable tbody").rows].forEach(row=>{
+        const r=Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el=>[el.dataset.k,el.value]));
+        const mmol = r.unit==="mol%" ? scale*Number(r.eq||0)/100 : scale*Number(r.eq||0);
+        const mw=Number(r.mw||0), density=Number(r.density||0), mg=mmol*mw;
+        row.querySelector(".mmol").textContent=fmt(mmol,3);
+        row.querySelector(".amount").textContent=density ? `${fmt(mg,2)} mg / ${fmt((mg/1000)/density*1000,1)} uL` : `${fmt(mg,2)} mg`;
+      });
+    }
+    function renderImages(images){ q("#images").innerHTML=images.map(src=>`<img src="${src}" alt="">`).join(""); }
+    function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
+    async function addFiles(files, target){
+      for(const file of files){
+        if(!file.type.startsWith("image/")) continue;
+        const src=await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file); });
+        if(target==="scheme"){ q("#schemePreview").src=src; q("#schemePreview").hidden=false; }
+        else q("#images").insertAdjacentHTML("beforeend",`<img src="${src}" alt="">`);
+      }
+    }
+    async function saveCurrent(){
+      const data=collect(); state.currentId=data.note_id;
+      await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, status:data.status, archived:false, updated_at:new Date().toISOString()});
+      await post({kind:"edit", note_id:data.note_id, payload:data, updated_at:new Date().toISOString()});
+      msg("保存リクエストを送りました"); loadNotes();
+    }
+    q("#saveEndpoint").onclick=()=>{ localStorage.setItem(ENDPOINT_KEY,q("#endpoint").value.trim()); msg("URL保存済み"); };
+    q("#reloadNotes").onclick=loadNotes;
+    q("#newNote").onclick=()=>setEditor(blankNote());
+    q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
+    q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); state.currentId=""; loadNotes(); };
+    q("#noteList").onclick=e=>{ const card=e.target.closest(".note-card"); if(!card) return; jsonp({kind:"edit",note_id:card.dataset.id}, rec=>{ if(rec?.payload) setEditor(rec.payload); else { const n=state.notes.find(x=>x.note_id===card.dataset.id); setEditor({...blankNote(),...n}); } }); };
+    q("#reagentTable").oninput=recalc;
+    q("#reagentTable").onclick=e=>{ const b=e.target.closest("[data-del]"); if(!b) return; b.closest("tr").remove(); recalc(); };
+    q("#addReagent").onclick=()=>{ const rows=readReagents(); rows.push({name:"",role:"reagent",mw:"",eq:"1",unit:"eq",density:""}); renderReagents(rows); recalc(); };
+    q("#addSolvent").onclick=()=>{ const rows=readReagents(); rows.push({name:"",role:"liquid reagent",mw:"",eq:"1",unit:"eq",density:""}); renderReagents(rows); recalc(); };
+    ["scale","conc","solvent"].forEach(id=>q("#"+id).addEventListener("input",recalc));
+    q("#schemeFile").onchange=e=>addFiles(e.target.files,"scheme");
+    q("#imageFile").onchange=e=>addFiles(e.target.files,"images");
+    for(const [id,target] of [["schemeDrop","scheme"],["imageDrop","images"]]){
+      const el=q("#"+id);
+      el.ondragover=e=>{ e.preventDefault(); el.classList.add("drag"); };
+      el.ondragleave=()=>el.classList.remove("drag");
+      el.ondrop=e=>{ e.preventDefault(); el.classList.remove("drag"); addFiles(e.dataTransfer.files,target); };
+    }
+    document.addEventListener("paste", e=>{ const files=[...e.clipboardData.files]; if(files.length) addFiles(files,"images"); });
+    setEditor(blankNote());
+    if(endpoint()) loadNotes();
+  </script>
+</body>
+</html>
