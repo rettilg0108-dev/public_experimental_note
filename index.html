@@ -234,6 +234,13 @@
       <button type="button" id="load-sheet-status">Sheets再読込</button>
       <a class="open-note" href="dynamic_note_app/index.html">New note</a>
     </div>
+    <details class="section">
+      <summary>Sheets settings</summary>
+      <div class="tools">
+        <input id="sheets-endpoint" type="url" placeholder="Apps Script Web App URL">
+        <button type="button" id="save-sheets-endpoint">URL保存</button>
+      </div>
+    </details>
     <main>
       <section class="section" aria-labelledby="ongoing-heading">
         <h2 id="ongoing-heading">進行中</h2>
@@ -331,6 +338,7 @@
     const ongoingEmpty = document.getElementById("ongoing-empty");
     const completedEmpty = document.getElementById("completed-empty");
     const dialog = document.getElementById("finish-dialog");
+    const sheetsEndpointInput = document.getElementById("sheets-endpoint");
     const form = document.getElementById("finish-form");
     const finishedDate = document.getElementById("finished-date");
     const finishedOutcome = document.getElementById("finished-outcome");
@@ -354,6 +362,8 @@
     function sheetEndpoint() {
       return localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
     }
+
+    sheetsEndpointInput.value = sheetEndpoint();
 
     function todayString() {
       return new Date().toLocaleDateString("sv-SE");
@@ -571,6 +581,11 @@
       updateEmptyStates();
     }
     search.addEventListener("input", applySearch);
+    document.getElementById("save-sheets-endpoint")?.addEventListener("click", () => {
+      localStorage.setItem(SHEETS_ENDPOINT_KEY, sheetsEndpointInput.value.trim());
+      loadDynamicNotesFromSheets();
+      loadStatusFromSheets();
+    });
     document.getElementById("load-sheet-status")?.addEventListener("click", loadStatusFromSheets);
     applySearch();
     loadDynamicNotesFromSheets();
