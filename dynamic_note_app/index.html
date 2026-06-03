@@ -54,7 +54,7 @@
     <header>
       <h1>Dynamic Experimental Note</h1>
       <p class="muted">Google Sheetsに保存する汎用合成実験ノート。新規作成、編集、アーカイブ、試薬量計算、画像貼付に対応。</p>
-      <div class="row"><a href="../index.html">Top page</a><a href="../sheet_sync_test/index.html">Sheets sync test</a></div>
+      <div class="row"><a href="../index.html">Top page</a></div>
     </header>
 
     <section class="panel">
@@ -166,7 +166,27 @@
         <span class="date">${n.date||""}</span><strong>${n.title||"(untitled)"}</strong><span class="muted">${n.subtitle||""}</span>
       </article>`).join("");
     }
-    function loadNotes(){ jsonp({kind:"notes"}, rows=>{ state.notes=rows||[]; renderList(); msg("ノート一覧を読み込みました"); }); }
+    function loadNoteById(noteId) {
+      if (!noteId) return;
+      jsonp({kind:"edit", note_id: noteId}, rec => {
+        if (rec?.payload) {
+          setEditor(rec.payload);
+        } else {
+          const n = state.notes.find(x => x.note_id === noteId);
+          if (n) setEditor({...blankNote(), ...n, note_id: n.note_id});
+          else msg("指定ノートが見つかりません");
+        }
+      });
+    }
+    function loadNotes(){
+      jsonp({kind:"notes"}, rows=>{
+        state.notes=rows||[];
+        renderList();
+        msg("ノート一覧を読み込みました");
+        const requested = new URLSearchParams(location.search).get("note_id");
+        if (requested && !state.currentId) loadNoteById(requested);
+      });
+    }
     function blankNote(){
       const note_id=id();
       return { note_id, date:today(), method:"", product:"", title:"", subtitle:"", status:"ongoing", scale:"0.100", conc:"0.05", solvent:"toluene", scheme:"", reagents:defaultReagents(), procedure:"", analysis:"", memo:"", images:[] };

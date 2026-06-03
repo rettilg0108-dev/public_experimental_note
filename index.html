@@ -232,7 +232,6 @@
     <div class="tools">
       <input id="search" type="search" placeholder="Search by date, title, reagent, tag..." aria-label="Search notes">
       <button type="button" id="load-sheet-status">Sheets再読込</button>
-      <a class="open-note" href="sheet_sync_test/index.html">Sheets sync test</a>
       <a class="open-note" href="dynamic_note_app/index.html">New note</a>
     </div>
     <main>
@@ -429,6 +428,78 @@
       document.body.append(script);
     }
 
+    function createDynamicNote(row) {
+      if (!row.note_id || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
+      const href = "dynamic_note_app/index.html?note_id=" + encodeURIComponent(row.note_id);
+      const note = document.createElement("article");
+      note.className = "note";
+      note.dataset.href = href;
+      note.dataset.noteId = row.note_id;
+      note.dataset.storageKey = "";
+      note.dataset.defaultStatus = row.status || "ongoing";
+      note.innerHTML =
+        '<span class="date"></span>' +
+        '<a class="title"></a>' +
+        '<span class="subtitle"></span>' +
+        '<span class="row">' +
+          '<span class="status">進行中</span>' +
+          '<span class="tags"><span class="tag">Sheets note</span></span>' +
+        '</span>' +
+        '<span class="complete-summary" hidden></span>' +
+        '<span class="actions">' +
+          '<a class="open-note">Open</a>' +
+          '<button class="finish-button" type="button">終了登録</button>' +
+          '<button class="reopen-button" type="button" hidden>進行中に戻す</button>' +
+        '</span>';
+      note.querySelector(".date").textContent = row.date || "";
+      note.querySelector(".title").textContent = row.title || "(untitled)";
+      note.querySelector(".title").href = href;
+      note.querySelector(".subtitle").textContent = row.subtitle || [row.method, row.product].filter(Boolean).join(": ");
+      note.querySelector(".open-note").href = href;
+      note.querySelector(".finish-button").addEventListener("click", () => {
+        activeNote = note;
+        const record = state[statusId(note)] || {};
+        finishedDate.value = record.finishedDate || todayString();
+        finishedOutcome.value = record.outcome || "追加検討必要";
+        finishedComment.value = record.comment || "";
+        dialog.showModal();
+      });
+      note.querySelector(".reopen-button").addEventListener("click", () => {
+        const id = statusId(note);
+        delete state[id];
+        saveStatusState();
+        postStatusToSheets({ note_id: id, status: "ongoing", finished_date: "", outcome: "", comment: "", updated_at: new Date().toISOString() });
+        setNoteStatus(note);
+        applySearch();
+      });
+      return note;
+    }
+
+    function loadDynamicNotesFromSheets() {
+      const endpoint = sheetEndpoint();
+      if (!endpoint) return;
+      const callbackName = "receiveSheetNotes_" + Date.now();
+      window[callbackName] = rows => {
+        const created = [];
+        for (const row of rows || []) {
+          const note = createDynamicNote(row);
+          if (note) {
+            notes.push(note);
+            created.push(note);
+          }
+        }
+        for (const note of created) setNoteStatus(note);
+        applySearch();
+        loadStatusFromSheets();
+        script.remove();
+        delete window[callbackName];
+      };
+      const script = document.createElement("script");
+      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "kind=notes&callback=" + callbackName;
+      script.onerror = () => delete window[callbackName];
+      document.body.append(script);
+    }
+
     function postStatusToSheets(record) {
       const endpoint = sheetEndpoint();
       if (!endpoint) return;
@@ -502,6 +573,7 @@
     search.addEventListener("input", applySearch);
     document.getElementById("load-sheet-status")?.addEventListener("click", loadStatusFromSheets);
     applySearch();
+    loadDynamicNotesFromSheets();
     loadStatusFromSheets();
   </script>
 </body>
