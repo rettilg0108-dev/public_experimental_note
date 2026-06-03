@@ -231,6 +231,7 @@
     </header>
     <div class="tools">
       <input id="search" type="search" placeholder="Search by date, title, reagent, tag..." aria-label="Search notes">
+      <button type="button" id="load-sheet-status">Sheets再読込</button>
       <a class="open-note" href="sheet_sync_test/index.html">Sheets sync test</a>
     </div>
     <main>
@@ -245,7 +246,7 @@
         <div class="empty" id="completed-empty" hidden>終了登録された実験はありません。</div>
       </section>
       <template id="note-template">
-        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned">
+        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-note-id="2026-06-01-xphos-m346" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html">XPhos Buchwald-Hartwig coupling: m346</a>
     <span class="subtitle">Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun</span>
@@ -260,7 +261,7 @@
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned">
+<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-note-id="2026-06-01-thiol-ir1061" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html">Thiol substitution: Thiol sulfonate IR1061</a>
     <span class="subtitle">sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h</span>
@@ -275,7 +276,7 @@
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned">
+<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-note-id="2026-05-29-buchwald" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned">
     <span class="date">2026-05-29</span>
     <a class="title" href="notes/2026-05-29_buchwald_c_n_coupling/index.html">Buchwald-Hartwig C-N coupling 検討</a>
     <span class="subtitle">Pd2dba3/BINAP, KOt-Bu, toluene</span>
@@ -322,6 +323,7 @@
   </dialog>
   <script>
     const STATUS_KEY = "experimental-note-index-status:v1";
+    const SHEETS_ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const search = document.getElementById("search");
     const template = document.getElementById("note-template");
     const ongoingList = document.getElementById("ongoing-list");
@@ -349,16 +351,20 @@
       localStorage.setItem(STATUS_KEY, JSON.stringify(state));
     }
 
+    function sheetEndpoint() {
+      return localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
+    }
+
     function todayString() {
       return new Date().toLocaleDateString("sv-SE");
     }
 
     function statusId(note) {
-      return note.dataset.storageKey || note.dataset.href;
+      return note.dataset.noteId || note.dataset.storageKey || note.dataset.href;
     }
 
     function outcomeText(record) {
-      return [record.finishedDate, record.outcome, record.comment].filter(Boolean).join(" / ");
+      return [record.finishedDate || record.finished_date, record.outcome, record.comment].filter(Boolean).join(" / ");
     }
 
     function setNoteStatus(note) {
@@ -367,8 +373,9 @@
       const status = note.querySelector(".status");
       const finishButton = note.querySelector(".finish-button");
       const reopenButton = note.querySelector(".reopen-button");
-      note.classList.toggle("completed", Boolean(record));
-      if (record) {
+      const completed = Boolean(record) && record.status !== "ongoing";
+      note.classList.toggle("completed", completed);
+      if (completed) {
         status.textContent = "終了";
         summary.textContent = outcomeText(record);
         summary.hidden = false;
@@ -388,6 +395,43 @@
     function updateEmptyStates() {
       ongoingEmpty.hidden = Boolean(ongoingList.querySelector(".note:not([hidden])"));
       completedEmpty.hidden = Boolean(completedList.querySelector(".note:not([hidden])"));
+    }
+
+    function loadStatusFromSheets() {
+      const endpoint = sheetEndpoint();
+      if (!endpoint) return;
+      const callbackName = "receiveIndexStatus_" + Date.now();
+      window[callbackName] = rows => {
+        for (const row of rows || []) {
+          if (!row.note_id) continue;
+          if (row.status === "completed") {
+            state[row.note_id] = {
+              status: "completed",
+              finishedDate: row.finished_date || "",
+              outcome: row.outcome || "",
+              comment: row.comment || "",
+              updatedAt: row.updated_at || ""
+            };
+          } else {
+            delete state[row.note_id];
+          }
+        }
+        saveStatusState();
+        notes.forEach(setNoteStatus);
+        applySearch();
+        script.remove();
+        delete window[callbackName];
+      };
+      const script = document.createElement("script");
+      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "callback=" + callbackName;
+      script.onerror = () => delete window[callbackName];
+      document.body.append(script);
+    }
+
+    function postStatusToSheets(record) {
+      const endpoint = sheetEndpoint();
+      if (!endpoint) return;
+      fetch(endpoint, { method: "POST", mode: "no-cors", body: JSON.stringify(record) }).catch(() => {});
     }
 
     template.replaceWith(...template.content.childNodes);
@@ -412,8 +456,10 @@
         dialog.showModal();
       });
       note.querySelector(".reopen-button").addEventListener("click", () => {
-        delete state[statusId(note)];
+        const id = statusId(note);
+        delete state[id];
         saveStatusState();
+        postStatusToSheets({ note_id: id, status: "ongoing", finished_date: "", outcome: "", comment: "", updated_at: new Date().toISOString() });
         setNoteStatus(note);
         applySearch();
       });
@@ -423,12 +469,23 @@
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (!activeNote) return;
-      state[statusId(activeNote)] = {
+      const id = statusId(activeNote);
+      state[id] = {
+        status: "completed",
         finishedDate: finishedDate.value || todayString(),
         outcome: finishedOutcome.value,
-        comment: finishedComment.value.trim()
+        comment: finishedComment.value.trim(),
+        updatedAt: new Date().toISOString()
       };
       saveStatusState();
+      postStatusToSheets({
+        note_id: id,
+        status: "completed",
+        finished_date: state[id].finishedDate,
+        outcome: state[id].outcome,
+        comment: state[id].comment,
+        updated_at: state[id].updatedAt
+      });
       setNoteStatus(activeNote);
       activeNote = null;
       dialog.close();
@@ -442,7 +499,9 @@
       updateEmptyStates();
     }
     search.addEventListener("input", applySearch);
+    document.getElementById("load-sheet-status")?.addEventListener("click", loadStatusFromSheets);
     applySearch();
+    loadStatusFromSheets();
   </script>
 </body>
 </html>
