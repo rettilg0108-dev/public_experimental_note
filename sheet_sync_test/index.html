@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>Sheets Sync Test - Experimental Notes</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #647282;
+      --line: #d7dde5;
+      --panel: #ffffff;
+      --accent: #245c7a;
+      --bg: #eef2f5;
+      --soft: #eaf3f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    .wrap {
+      width: min(980px, calc(100% - 32px));
+      margin: 32px auto;
+    }
+    header, .panel, .note {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    header {
+      border-top: 5px solid var(--accent);
+      padding: 24px 26px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    p {
+      margin: 0 0 10px;
+    }
+    .lead, .muted, footer {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .panel {
+      padding: 16px;
+      margin-bottom: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    input, select, textarea, button, a.button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 11px;
+      font: inherit;
+      background: #fff;
+    }
+    button, a.button {
+      width: auto;
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 750;
+      text-decoration: none;
+    }
+    button:hover, a.button:hover {
+      border-color: var(--accent);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .notes {
+      display: grid;
+      gap: 10px;
+    }
+    .note {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .note-head {
+      display: grid;
+      gap: 3px;
+    }
+    .title {
+      color: inherit;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .title:hover {
+      color: var(--accent);
+    }
+    .date {
+      color: var(--accent);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: var(--soft);
+      color: #28546a;
+    }
+    .complete {
+      background: #eef5ee;
+      color: #38613d;
+    }
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 150px 160px 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+    .message {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    code {
+      background: #eef2f5;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    footer {
+      margin-top: 14px;
+    }
+    @media (max-width: 760px) {
+      .wrap { width: 100%; margin: 0; }
+      header, .panel, .note { border-left: 0; border-right: 0; border-radius: 0; }
+      .controls { grid-template-columns: 1fr; }
+      .row > * { flex: 1 1 auto; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Sheets Sync Test</h1>
+      <p class="lead">6/1の実験ノートだけで、終了状態をGoogle Sheetsへ同期するためのテストページです。</p>
+    </header>
+
+    <section class="panel">
+      <h2>接続先</h2>
+      <label>
+        Apps Script Web App URL
+        <input id="endpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+      </label>
+      <div class="row">
+        <button id="save-endpoint" type="button">URL保存</button>
+        <button id="load-sheet" type="button">Sheetsから再読込</button>
+        <a class="button" href="../index.html">Top page</a>
+      </div>
+      <p class="muted">URL未設定時はこのブラウザ内のデモ保存だけで動きます。Apps Script URLを入れるとSheetsへ送信します。</p>
+      <div class="message" id="message"></div>
+    </section>
+
+    <main class="notes" id="notes"></main>
+
+    <footer>noindex / nofollow. Endpoint URL is saved only in this browser.</footer>
+  </div>
+
+  <script>
+    const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const DEMO_KEY = "experimental-note-sheets-test-demo:v1";
+    const notes = [
+      {
+        id: "2026-06-01-xphos-m346",
+        date: "2026-06-01",
+        title: "XPhos Buchwald-Hartwig coupling: m346",
+        subtitle: "Pd2dba3/XPhos, KOt-Bu, toluene",
+        href: "../notes/2026-06-01_xphos_naotbu_reaction1/index.html"
+      },
+      {
+        id: "2026-06-01-thiol-ir1061",
+        date: "2026-06-01",
+        title: "Thiol substitution: Thiol sulfonate IR1061",
+        subtitle: "sodium 3-mercaptopropanesulfonate, NEt3, DMF",
+        href: "../notes/2026-06-01_thiol_sulfonate_substitution/index.html"
+      }
+    ];
+    const endpointInput = document.getElementById("endpoint");
+    const message = document.getElementById("message");
+    const notesRoot = document.getElementById("notes");
+    let statusState = loadDemoState();
+
+    endpointInput.value = localStorage.getItem(ENDPOINT_KEY) || "";
+
+    function todayString() {
+      return new Date().toLocaleDateString("sv-SE");
+    }
+
+    function loadDemoState() {
+      try {
+        return JSON.parse(localStorage.getItem(DEMO_KEY) || "{}") || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveDemoState() {
+      localStorage.setItem(DEMO_KEY, JSON.stringify(statusState));
+    }
+
+    function setMessage(text) {
+      message.textContent = text;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function render() {
+      notesRoot.innerHTML = notes.map(note => {
+        const record = statusState[note.id] || { status: "ongoing", finished_date: "", outcome: "追加検討必要", comment: "" };
+        const completed = record.status === "completed";
+        return `<article class="note" data-note-id="${escapeHtml(note.id)}">
+          <div class="note-head">
+            <span class="date">${escapeHtml(note.date)}</span>
+            <a class="title" href="${escapeHtml(note.href)}">${escapeHtml(note.title)}</a>
+            <span class="muted">${escapeHtml(note.subtitle)}</span>
+          </div>
+          <span class="status ${completed ? "complete" : ""}">${completed ? "終了" : "進行中"}</span>
+          <div class="controls">
+            <label>状態
+              <select data-field="status">
+                <option value="ongoing" ${!completed ? "selected" : ""}>進行中</option>
+                <option value="completed" ${completed ? "selected" : ""}>終了</option>
+              </select>
+            </label>
+            <label>終了日
+              <input data-field="finished_date" type="date" value="${escapeHtml(record.finished_date || todayString())}">
+            </label>
+            <label>結果
+              <select data-field="outcome">
+                ${["追加検討必要", "成功", "失敗/中止", "保留"].map(value => `<option value="${escapeHtml(value)}" ${record.outcome === value ? "selected" : ""}>${escapeHtml(value)}</option>`).join("")}
+              </select>
+            </label>
+            <button data-action="save" type="button">保存</button>
+          </div>
+          <label>コメント
+            <textarea data-field="comment" placeholder="精製待ち、追加条件検討、目的物確認済み、など">${escapeHtml(record.comment || "")}</textarea>
+          </label>
+        </article>`;
+      }).join("");
+    }
+
+    function readCard(card) {
+      const noteId = card.dataset.noteId;
+      const fields = Object.fromEntries([...card.querySelectorAll("[data-field]")].map(el => [el.dataset.field, el.value]));
+      return {
+        note_id: noteId,
+        status: fields.status,
+        finished_date: fields.status === "completed" ? (fields.finished_date || todayString()) : "",
+        outcome: fields.status === "completed" ? fields.outcome : "",
+        comment: fields.comment.trim(),
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    async function saveRecord(record) {
+      statusState[record.note_id] = record;
+      saveDemoState();
+      render();
+      const endpoint = endpointInput.value.trim();
+      if (!endpoint) {
+        setMessage("デモ保存しました。Apps Script URL未設定なので、この端末内だけの保存です。");
+        return;
+      }
+      await fetch(endpoint, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(record)
+      });
+      setMessage("Sheetsへ保存リクエストを送りました。反映確認は「Sheetsから再読込」で行います。");
+    }
+
+    function ingestRows(rows) {
+      const next = {};
+      for (const row of rows || []) {
+        if (!row.note_id) continue;
+        next[row.note_id] = {
+          note_id: row.note_id,
+          status: row.status || "ongoing",
+          finished_date: row.finished_date || "",
+          outcome: row.outcome || "",
+          comment: row.comment || "",
+          updated_at: row.updated_at || ""
+        };
+      }
+      statusState = { ...statusState, ...next };
+      saveDemoState();
+      render();
+    }
+
+    function loadFromSheet() {
+      const endpoint = endpointInput.value.trim();
+      if (!endpoint) {
+        setMessage("Apps Script URL未設定です。今はデモ保存の内容を表示しています。");
+        return;
+      }
+      const callbackName = `receiveSheetRows_${Date.now()}`;
+      window[callbackName] = rows => {
+        ingestRows(rows);
+        setMessage("Sheetsから読み込みました。");
+        script.remove();
+        delete window[callbackName];
+      };
+      const script = document.createElement("script");
+      script.src = `${endpoint}${endpoint.includes("?") ? "&" : "?"}callback=${callbackName}`;
+      script.onerror = () => {
+        setMessage("Sheetsから読めませんでした。Apps Script URLと公開設定を確認してください。");
+        delete window[callbackName];
+      };
+      document.body.append(script);
+    }
+
+    document.getElementById("save-endpoint").addEventListener("click", () => {
+      localStorage.setItem(ENDPOINT_KEY, endpointInput.value.trim());
+      setMessage("Apps Script URLをこのブラウザに保存しました。");
+    });
+    document.getElementById("load-sheet").addEventListener("click", loadFromSheet);
+    notesRoot.addEventListener("click", event => {
+      const button = event.target.closest("[data-action='save']");
+      if (!button) return;
+      saveRecord(readCard(button.closest(".note"))).catch(error => {
+        setMessage(`保存エラー: ${error.message}`);
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
