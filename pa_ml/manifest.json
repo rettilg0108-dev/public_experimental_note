@@ -67,14 +67,119 @@
     "title": "Prediction / PAxFWHM Compact Linear / all IDs",
     "source": "/Users/lightglitter/Library/CloudStorage/OneDrive-国立大学法人北海道大学/10_Research/10_My_Projects/ML_QChem_Prediction/04_ML/260420-260424_PAmeasured_summary/pred_pxf_lin53c10_k3to5_allids_20260526_200007/index.html",
     "output": "pages/pred-pxf-linear-allids.html",
-    "encrypted_bytes": 12002
+    "encrypted_bytes": 12074
+  },
+  {
+    "slug": "pred-pxfall-k3-r1",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K3 rank 1",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k3_r1.html",
+    "output": "pages/pred-pxfall-k3-r1.html",
+    "encrypted_bytes": 58974
+  },
+  {
+    "slug": "pred-pxfall-k3-r2",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K3 rank 2",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k3_r2.html",
+    "output": "pages/pred-pxfall-k3-r2.html",
+    "encrypted_bytes": 58934
+  },
+  {
+    "slug": "pred-pxfall-k3-r3",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K3 rank 3",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k3_r3.html",
+    "output": "pages/pred-pxfall-k3-r3.html",
+    "encrypted_bytes": 58946
+  },
+  {
+    "slug": "pred-pxfall-k4-r1",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K4 rank 1",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k4_r1.html",
+    "output": "pages/pred-pxfall-k4-r1.html",
+    "encrypted_bytes": 59170
+  },
+  {
+    "slug": "pred-pxfall-k4-r2",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K4 rank 2",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k4_r2.html",
+    "output": "pages/pred-pxfall-k4-r2.html",
+    "encrypted_bytes": 59138
+  },
+  {
+    "slug": "pred-pxfall-k4-r3",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K4 rank 3",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k4_r3.html",
+    "output": "pages/pred-pxfall-k4-r3.html",
+    "encrypted_bytes": 59146
+  },
+  {
+    "slug": "pred-pxfall-k5-r1",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K5 rank 1",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k5_r1.html",
+    "output": "pages/pred-pxfall-k5-r1.html",
+    "encrypted_bytes": 59322
+  },
+  {
+    "slug": "pred-pxfall-k5-r2",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K5 rank 2",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k5_r2.html",
+    "output": "pages/pred-pxfall-k5-r2.html",
+    "encrypted_bytes": 59354
+  },
+  {
+    "slug": "pred-pxfall-k5-r3",
+    "title": "Prediction / PAxFWHM Compact Linear / all IDs / K5 rank 3",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pxf_lin53c10_k3to5_allids_20260526_200007/model_k5_r3.html",
+    "output": "pages/pred-pxfall-k5-r3.html",
+    "encrypted_bytes": 59318
   },
   {
     "slug": "pred-pa30-pa50-linear-allids",
     "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs",
     "source": "/Users/lightglitter/Library/CloudStorage/OneDrive-国立大学法人北海道大学/10_Research/10_My_Projects/ML_QChem_Prediction/04_ML/260420-260424_PAmeasured_summary/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/index.html",
     "output": "pages/pred-pa30-pa50-linear-allids.html",
-    "encrypted_bytes": 10706
+    "encrypted_bytes": 10746
+  },
+  {
+    "slug": "pred-paall-pa30-r1",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA30 rank 1",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa30_r1.html",
+    "output": "pages/pred-paall-pa30-r1.html",
+    "encrypted_bytes": 59138
+  },
+  {
+    "slug": "pred-paall-pa30-r2",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA30 rank 2",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa30_r2.html",
+    "output": "pages/pred-paall-pa30-r2.html",
+    "encrypted_bytes": 59302
+  },
+  {
+    "slug": "pred-paall-pa30-r3",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA30 rank 3",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa30_r3.html",
+    "output": "pages/pred-paall-pa30-r3.html",
+    "encrypted_bytes": 59346
+  },
+  {
+    "slug": "pred-paall-pa50-r1",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA50 rank 1",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa50_r1.html",
+    "output": "pages/pred-paall-pa50-r1.html",
+    "encrypted_bytes": 59174
+  },
+  {
+    "slug": "pred-paall-pa50-r2",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA50 rank 2",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa50_r2.html",
+    "output": "pages/pred-paall-pa50-r2.html",
+    "encrypted_bytes": 59346
+  },
+  {
+    "slug": "pred-paall-pa50-r3",
+    "title": "Prediction / PA_30 PA_50 Compact Linear / all IDs / PA50 rank 3",
+    "source": "/Users/lightglitter/Documents/Codex/2026-05-08/you-chatgpt/_stage_candidate_display_20260527/pred_pa30_pa50_lin53c10_log_top3_allids_20260526_200024/model_pa50_r3.html",
+    "output": "pages/pred-paall-pa50-r3.html",
+    "encrypted_bytes": 59338
   },
   {
     "slug": "next-design",
