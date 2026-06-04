@@ -71,9 +71,6 @@
       border-color: var(--accent);
     }
     .new-note-button {
-      color: #fff;
-      background: var(--accent);
-      border-color: var(--accent);
       white-space: nowrap;
     }
     .list {
@@ -304,7 +301,7 @@
   </article>
       </template>
     </main>
-    <footer>Updated: 2026-06-03. noindex / nofollow</footer>
+    <footer>Updated: 2026-06-04. noindex / nofollow</footer>
   </div>
   <dialog id="finish-dialog">
     <form method="dialog" class="dialog-body" id="finish-form">
@@ -335,6 +332,7 @@
   <script>
     const STATUS_KEY = "experimental-note-index-status:v1";
     const SHEETS_ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const DELETED_NOTES_KEY = "experimental-note-deleted-notes:v1";
     const search = document.getElementById("search");
     const template = document.getElementById("note-template");
     const ongoingList = document.getElementById("ongoing-list");
@@ -357,6 +355,18 @@
       } catch {
         return {};
       }
+    }
+
+    function loadDeletedNoteIds() {
+      try {
+        return new Set(JSON.parse(localStorage.getItem(DELETED_NOTES_KEY) || "[]"));
+      } catch {
+        return new Set();
+      }
+    }
+
+    function saveDeletedNoteIds(ids) {
+      localStorage.setItem(DELETED_NOTES_KEY, JSON.stringify([...ids]));
     }
 
     function saveStatusState() {
@@ -443,7 +453,7 @@
     }
 
     function createDynamicNote(row) {
-      if (!row.note_id || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
+      if (!row.note_id || loadDeletedNoteIds().has(row.note_id) || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
       const href = "dynamic_note_app/index.html?note_id=" + encodeURIComponent(row.note_id);
       const note = document.createElement("article");
       note.className = "note";
@@ -490,6 +500,9 @@
       note.querySelector(".delete-button").addEventListener("click", event => {
         event.stopPropagation();
         if (!confirm("このノートを削除/アーカイブします。よろしいですか？")) return;
+        const deleted = loadDeletedNoteIds();
+        deleted.add(row.note_id);
+        saveDeletedNoteIds(deleted);
         postNoteArchive(row, true);
         note.remove();
         const index = notes.indexOf(note);
