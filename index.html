@@ -257,7 +257,7 @@
         <div class="empty" id="completed-empty" hidden>終了登録された実験はありません。</div>
       </section>
       <template id="note-template">
-        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-note-id="2026-06-01-xphos-m346" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned">
+        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-note-id="2026-06-01-xphos-m346" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned" data-note-date="2026-06-01" data-note-title="XPhos Buchwald-Hartwig coupling: m346" data-note-subtitle="Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun" data-note-tags="Buchwald-Hartwig, XPhos, KOt-Bu, C-N coupling">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html">XPhos Buchwald-Hartwig coupling: m346</a>
     <span class="subtitle">Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun</span>
@@ -267,11 +267,13 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
+      <button class="duplicate-button" type="button">複製</button>
+      <button class="delete-button" type="button">削除</button>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-note-id="2026-06-01-thiol-ir1061" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned">
+<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-note-id="2026-06-01-thiol-ir1061" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned" data-note-date="2026-06-01" data-note-title="Thiol substitution: Thiol sulfonate IR1061" data-note-subtitle="sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h" data-note-tags="thiol, sulfonate, DMF, cyanine">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html">Thiol substitution: Thiol sulfonate IR1061</a>
     <span class="subtitle">sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h</span>
@@ -281,11 +283,13 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
+      <button class="duplicate-button" type="button">複製</button>
+      <button class="delete-button" type="button">削除</button>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-note-id="2026-05-29-buchwald" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned">
+<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-note-id="2026-05-29-buchwald" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned" data-note-date="2026-05-29" data-note-title="Buchwald-Hartwig C-N coupling 検討" data-note-subtitle="Pd2dba3/BINAP, KOt-Bu, toluene" data-note-tags="Buchwald-Hartwig, C-N coupling, azo dye">
     <span class="date">2026-05-29</span>
     <a class="title" href="notes/2026-05-29_buchwald_c_n_coupling/index.html">Buchwald-Hartwig C-N coupling 検討</a>
     <span class="subtitle">Pd2dba3/BINAP, KOt-Bu, toluene</span>
@@ -295,6 +299,8 @@
     </span>
     <span class="complete-summary" hidden></span>
     <span class="actions">
+      <button class="duplicate-button" type="button">複製</button>
+      <button class="delete-button" type="button">削除</button>
       <button class="finish-button" type="button">終了登録</button>
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
@@ -371,6 +377,12 @@
 
     function saveStatusState() {
       localStorage.setItem(STATUS_KEY, JSON.stringify(state));
+    }
+
+    function markNoteDeleted(noteId) {
+      const deleted = loadDeletedNoteIds();
+      deleted.add(noteId);
+      saveDeletedNoteIds(deleted);
     }
 
     function sheetEndpoint() {
@@ -471,6 +483,7 @@
         '</span>' +
         '<span class="complete-summary" hidden></span>' +
         '<span class="actions">' +
+          '<button class="duplicate-button" type="button">複製</button>' +
           '<button class="delete-button" type="button">削除</button>' +
           '<button class="finish-button" type="button">終了登録</button>' +
           '<button class="reopen-button" type="button" hidden>進行中に戻す</button>' +
@@ -497,12 +510,14 @@
         setNoteStatus(note);
         applySearch();
       });
+      note.querySelector(".duplicate-button").addEventListener("click", event => {
+        event.stopPropagation();
+        location.href = "dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
+      });
       note.querySelector(".delete-button").addEventListener("click", event => {
         event.stopPropagation();
         if (!confirm("このノートを削除/アーカイブします。よろしいですか？")) return;
-        const deleted = loadDeletedNoteIds();
-        deleted.add(row.note_id);
-        saveDeletedNoteIds(deleted);
+        markNoteDeleted(row.note_id);
         postNoteArchive(row, true);
         note.remove();
         const index = notes.indexOf(note);
@@ -510,6 +525,44 @@
         applySearch();
       });
       return note;
+    }
+
+    function encodePrefill(data) {
+      return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    }
+
+    function notePrefill(note) {
+      const title = note.dataset.noteTitle || note.querySelector(".title")?.textContent.trim() || "";
+      const colonIndex = title.indexOf(":");
+      const method = colonIndex >= 0 ? title.slice(0, colonIndex).trim() : title;
+      const product = colonIndex >= 0 ? title.slice(colonIndex + 1).trim() : "";
+      return {
+        date: todayString(),
+        method,
+        product,
+        title,
+        keywords: note.dataset.noteTags || "",
+        subtitle: note.dataset.noteSubtitle || note.querySelector(".subtitle")?.textContent.trim() || "",
+        status: "ongoing"
+      };
+    }
+
+    function deleteNoteCard(note) {
+      const id = statusId(note);
+      if (!confirm("このノートを削除/非表示にします。よろしいですか？")) return;
+      markNoteDeleted(id);
+      postNoteArchive({
+        note_id: id,
+        date: note.dataset.noteDate || note.querySelector(".date")?.textContent.trim() || "",
+        title: note.dataset.noteTitle || note.querySelector(".title")?.textContent.trim() || "",
+        subtitle: note.dataset.noteSubtitle || note.querySelector(".subtitle")?.textContent.trim() || "",
+        keywords: note.dataset.noteTags || "",
+        status: note.dataset.defaultStatus || "ongoing"
+      }, true);
+      note.remove();
+      const index = notes.indexOf(note);
+      if (index >= 0) notes.splice(index, 1);
+      applySearch();
     }
 
     function formatDateOnly(value) {
@@ -579,8 +632,12 @@
     }
 
     template.replaceWith(...template.content.childNodes);
-    const notes = [...document.querySelectorAll(".note")];
+    let notes = [...document.querySelectorAll(".note")];
     for (const note of notes) {
+      if (loadDeletedNoteIds().has(statusId(note))) {
+        note.remove();
+        continue;
+      }
       const key = note.dataset.storageKey;
       if (key) {
         try {
@@ -607,8 +664,17 @@
         setNoteStatus(note);
         applySearch();
       });
+      note.querySelector(".duplicate-button")?.addEventListener("click", event => {
+        event.stopPropagation();
+        location.href = "dynamic_note_app/index.html?prefill=" + encodeURIComponent(encodePrefill(notePrefill(note)));
+      });
+      note.querySelector(".delete-button")?.addEventListener("click", event => {
+        event.stopPropagation();
+        deleteNoteCard(note);
+      });
       setNoteStatus(note);
     }
+    notes = notes.filter(note => note.isConnected);
     for (const note of notes) {
       note.addEventListener("click", event => {
         if (event.target.closest("button,a")) return;

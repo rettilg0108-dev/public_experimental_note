@@ -136,12 +136,15 @@
     const q = s => document.querySelector(s);
     const msg = text => q("#msg").textContent = text;
     const state = { notes: [], currentId: "" };
-    const requestedNoteId = new URLSearchParams(location.search).get("note_id");
+    const params = new URLSearchParams(location.search);
+    const requestedNoteId = params.get("note_id");
+    const duplicateFromId = params.get("duplicate_from");
+    const prefillData = decodePrefill(params.get("prefill"));
     const defaultReagents = () => [
       { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
       { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
     ];
-    if (requestedNoteId && endpoint()) document.body.classList.add("note-view");
+    if ((requestedNoteId || duplicateFromId) && endpoint()) document.body.classList.add("note-view");
     function endpoint() { return localStorage.getItem(ENDPOINT_KEY) || ""; }
     function today() { return new Date().toLocaleDateString("sv-SE"); }
     function slug(value) {
@@ -155,6 +158,25 @@
     }
     function idFromFields() {
       return [q("#date").value || today(), slug(q("#method").value), slug(q("#product").value)].filter(Boolean).join("-") + "-" + Math.random().toString(36).slice(2,5);
+    }
+    function decodePrefill(value) {
+      if (!value) return null;
+      try {
+        return JSON.parse(decodeURIComponent(escape(atob(value))));
+      } catch {
+        return null;
+      }
+    }
+    function asDuplicate(data) {
+      return {
+        ...data,
+        note_id: "",
+        date: today(),
+        status: "ongoing",
+        operations: data.operations || [{date:"", time:"", text:""}],
+        memo: data.memo || "",
+        analysis: data.analysis || ""
+      };
     }
     function fmt(n,d=3){ if(!Number.isFinite(n)) return ""; if(Math.abs(n)>=100) return n.toFixed(1); if(Math.abs(n)>=10) return n.toFixed(2); return n.toFixed(d).replace(/0+$/,"").replace(/\.$/,""); }
     function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
@@ -184,12 +206,29 @@
         }
       });
     }
+    function duplicateNoteById(noteId) {
+      if (!noteId) return;
+      jsonp({kind:"edit", note_id: noteId}, rec => {
+        if (rec?.payload) {
+          setEditor(asDuplicate(rec.payload));
+          msg("複製元を読み込みました。日付と条件を確認して Save to Sheets してください。");
+        } else {
+          const n = state.notes.find(x => x.note_id === noteId);
+          if (n) {
+            setEditor(asDuplicate({...blankNote(), ...n}));
+            msg("複製元の概要を読み込みました。必要項目を補って Save to Sheets してください。");
+          } else {
+            msg("複製元が見つかりません");
+          }
+        }
+      });
+    }
     function loadNotes(){
       jsonp({kind:"notes"}, rows=>{
         state.notes=rows||[];
         msg("ノート一覧を読み込みました");
-        const requested = new URLSearchParams(location.search).get("note_id");
-        if (requested && !state.currentId) loadNoteById(requested);
+        if (requestedNoteId && !state.currentId) loadNoteById(requestedNoteId);
+        if (duplicateFromId && !state.currentId) duplicateNoteById(duplicateFromId);
       });
     }
     function blankNote(){
@@ -203,7 +242,7 @@
       document.title = shownTitle;
       q("#pageTitle").textContent = shownTitle;
       q("#pageLead").textContent = data.subtitle || [data.method, data.product].filter(Boolean).join(": ") || "Google Sheetsに保存する合成実験ノート。";
-      if (requestedNoteId && endpoint()) document.body.classList.add("note-view");
+      if ((requestedNoteId || duplicateFromId) && endpoint()) document.body.classList.add("note-view");
       q("#schemePreview").hidden=!data.scheme; q("#schemePreview").src=data.scheme||"";
       renderReagents(data.reagents||defaultReagents());
       renderOperations(data.operations || (data.procedure ? [{date:"", time:"", text:data.procedure}] : [{date:"", time:"", text:""}]));
@@ -283,6 +322,10 @@
     }
     document.addEventListener("paste", e=>{ const files=[...e.clipboardData.files]; if(files.length) addFiles(files,"images"); });
     setEditor(blankNote());
+    if (prefillData) {
+      setEditor(asDuplicate({...blankNote(), ...prefillData}));
+      msg("複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
+    }
     if(endpoint()) loadNotes();
     else msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
   </script>
