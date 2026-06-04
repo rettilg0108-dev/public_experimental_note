@@ -210,10 +210,60 @@
       color: var(--muted);
       font-size: 13px;
     }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      display: grid;
+      gap: 7px;
+    }
+    .summary-card strong {
+      color: var(--accent);
+      font-size: 13px;
+    }
+    .event-list {
+      display: grid;
+      gap: 10px;
+    }
+    .event-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .event-head {
+      display: grid;
+      grid-template-columns: 128px 1fr 1fr 1.4fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      background: #f6f8fa;
+      border-bottom: 1px solid var(--line);
+    }
+    .event-head b {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .event-body {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
     @media (max-width: 820px) {
       .wrap { width: 100%; margin: 0; }
       header, .panel { border-left: 0; border-right: 0; border-radius: 0; }
-      .grid, .split, .protocol { grid-template-columns: 1fr; }
+      .grid, .split, .protocol, .summary-grid, .mini-grid, .event-head { grid-template-columns: 1fr; }
       table { min-width: 760px; }
     }
   </style>
@@ -482,8 +532,8 @@ PA変化:
 
       <section class="panel draft" id="draft-d">
         <div>
-          <h2>案D: 化合物中心の Optical Profile</h2>
-          <p class="muted">1ページ = 1化合物。測定日はイベントとして積み上げ、代表値・ロット差・raw dataを同じ場所で追跡する案。</p>
+          <h2>案D改: Compound Profile + Event Cards</h2>
+          <p class="muted">1ページ = 1化合物。上部は現在の結論、下部に測定イベントをカードとして積む案。日々の入力はイベントカードだけで済むようにする。</p>
         </div>
 
         <div class="split">
@@ -493,34 +543,73 @@ PA変化:
               <label>compound ID<input value="IR1061-thiol"></label>
               <label>display name<input value="Thiol sulfonate IR1061"></label>
               <label>series<input value="IR1061 / cyanine"></label>
-              <label>status<select><option>active</option><option>archived</option><option>needs confirmation</option></select></label>
+              <label>status<select><option>active</option><option>needs confirmation</option><option>archived</option></select></label>
               <label>formula / exact mass<input value="C47H40O3S4 / 780.19"></label>
               <label>main solvent<input value="water / PBS"></label>
               <label>storage<input value="-20 ℃, dark"></label>
-              <label>default concentration<input value="5 uM"></label>
+              <label>default conc.<input value="5 uM"></label>
             </div>
           </section>
           <section class="subpanel">
-            <h3>structure / synthesis links</h3>
-            <div class="drop">構造画像、代表スペクトル、または合成スキームを貼る</div>
-            <div class="table-scroll" style="margin-top:10px">
-              <table>
-                <thead><tr><th>link type</th><th>ID / title</th><th>URL / note</th><th>comment</th></tr></thead>
-                <tbody>
-                  <tr><td><select><option>synthesis note</option><option>raw data</option><option>paper</option></select></td><td><input value="Thiol substitution: Thiol sulfonate IR1061"></td><td><input value="../notes/2026-06-01_thiol_sulfonate_substitution/"></td><td><input value="source synthesis"></td></tr>
-                </tbody>
-              </table>
+            <h3>structure / links</h3>
+            <div class="drop">構造画像、代表スペクトル、合成スキームを貼る</div>
+            <div class="row" style="margin-top:10px">
+              <span class="tag">synthesis: Thiol substitution IR1061</span>
+              <span class="tag">lot A: crude</span>
+              <span class="tag">lot B: purified</span>
             </div>
           </section>
         </div>
 
         <section>
-          <h3>lot / stock registry</h3>
+          <h3>現在の結論</h3>
+          <div class="summary-grid">
+            <div class="summary-card">
+              <strong>Abs</strong>
+              <label>lambda max<input value=""></label>
+              <label>condition<input value="PBS, 5 uM, 25 ℃"></label>
+              <label>confidence<select><option>tentative</option><option>confirmed</option><option>low</option></select></label>
+            </div>
+            <div class="summary-card">
+              <strong>Fluorescence</strong>
+              <label>lambda ex<input value="730 nm"></label>
+              <label>lambda em<input value=""></label>
+              <label>comment<input value=""></label>
+            </div>
+            <div class="summary-card">
+              <strong>Photoacoustic</strong>
+              <label>wavelength<input value="808 nm"></label>
+              <label>signal<input value=""></label>
+              <label>comment<input value=""></label>
+            </div>
+            <div class="summary-card">
+              <strong>Best condition</strong>
+              <label>solvent / buffer<input value=""></label>
+              <label>concentration<input value=""></label>
+              <label>cuvette<input value=""></label>
+            </div>
+            <div class="summary-card">
+              <strong>Caveat</strong>
+              <label>lot difference<input value="unknown"></label>
+              <label>aggregation<input value="unknown"></label>
+              <label>stability<input value="unknown"></label>
+            </div>
+            <div class="summary-card">
+              <strong>Next decision</strong>
+              <label>next action<input value="repeat after purification"></label>
+              <label>priority<select><option>medium</option><option>high</option><option>low</option></select></label>
+              <label>owner<input value=""></label>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h3>lot / stock</h3>
           <div class="table-scroll">
             <table>
-              <thead><tr><th>lot / sample ID</th><th>由来</th><th>調製日</th><th>stock conc.</th><th>stock solvent</th><th>purity / state</th><th>保管</th><th>注意</th></tr></thead>
+              <thead><tr><th>lot</th><th>source synthesis</th><th>prepared</th><th>stock</th><th>solvent</th><th>state</th><th>storage</th><th>note</th></tr></thead>
               <tbody>
-                <tr><td><input value="IR1061-thiol-20260602-A"></td><td><input value="synthesis 2026-06-01, fraction A"></td><td><input value="2026-06-02"></td><td><input value="1.0 mM"></td><td><input value="DMSO"></td><td><input value="crude / needs purification"></td><td><input value="-20 ℃ dark"></td><td><input value="BF4/Cl state unclear"></td></tr>
+                <tr><td><input value="IR1061-thiol-20260602-A"></td><td><input value="2026-06-01 fraction A"></td><td><input value="2026-06-02"></td><td><input value="1.0 mM"></td><td><input value="DMSO"></td><td><input value="crude"></td><td><input value="-20 ℃ dark"></td><td><input value="BF4/Cl state unclear"></td></tr>
                 <tr><td><input value="IR1061-thiol-20260605-B"></td><td><input value="repurified sample"></td><td><input value="2026-06-05"></td><td><input value="0.5 mM"></td><td><input value="water"></td><td><input value="purified"></td><td><input value="4 ℃ dark"></td><td><input></td></tr>
               </tbody>
             </table>
@@ -528,30 +617,88 @@ PA変化:
         </section>
 
         <section>
-          <h3>representative optical properties</h3>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>property</th><th>best / representative value</th><th>condition</th><th>source event</th><th>confidence</th><th>comment</th></tr></thead>
-              <tbody>
-                <tr><td><input value="lambda_abs max"></td><td><input value=""></td><td><input value="PBS, 5 uM, 25 ℃"></td><td><input value="M2026-06-05-01"></td><td><select><option>tentative</option><option>confirmed</option><option>low</option></select></td><td><input></td></tr>
-                <tr><td><input value="lambda_em max"></td><td><input value=""></td><td><input value="ex 730 nm"></td><td><input value="M2026-06-05-01"></td><td><select><option>tentative</option><option>confirmed</option><option>low</option></select></td><td><input></td></tr>
-                <tr><td><input value="PA signal"></td><td><input value=""></td><td><input value="808 nm"></td><td><input value=""></td><td><select><option>tentative</option><option>confirmed</option><option>low</option></select></td><td><input></td></tr>
-                <tr><td><input value="solubility"></td><td><input value=""></td><td><input value="water/PBS/DMSO"></td><td><input value=""></td><td><select><option>tentative</option><option>confirmed</option><option>low</option></select></td><td><input></td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section>
           <h3>measurement events</h3>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>event ID</th><th>date</th><th>lot</th><th>purpose</th><th>sample condition</th><th>measurement</th><th>instrument</th><th>raw data</th><th>summary</th><th>next action</th></tr></thead>
-              <tbody>
-                <tr><td><input value="M2026-06-05-01"></td><td><input value="2026-06-05"></td><td><input value="IR1061-thiol-20260602-A"></td><td><input value="first optical check"></td><td><input value="PBS/DMSO 1%, 5 uM"></td><td><input value="Abs, FL emission"></td><td><input value="UV-vis / fluorometer"></td><td><input value="raw/20260605/M001"></td><td><input value="pending"></td><td><input value="repeat after purification"></td></tr>
-                <tr><td><input value="M2026-06-06-01"></td><td><input value="2026-06-06"></td><td><input value="IR1061-thiol-20260605-B"></td><td><input value="lot comparison"></td><td><input value="water, 5 uM"></td><td><input value="Abs, FL, PA"></td><td><input value="UV-vis / PA"></td><td><input value="raw/20260606/M001"></td><td><input></td><td><input></td></tr>
-              </tbody>
-            </table>
+          <div class="event-list">
+            <article class="event-card">
+              <div class="event-head">
+                <b>2026-06-05</b>
+                <span>lot A / first check</span>
+                <span>Abs, FL</span>
+                <span>PBS/DMSO 1%, 5 uM</span>
+                <button type="button">詳細</button>
+              </div>
+              <div class="event-body">
+                <div class="mini-grid">
+                  <label>event ID<input value="M2026-06-05-01"></label>
+                  <label>lot<input value="IR1061-thiol-20260602-A"></label>
+                  <label>purpose<input value="first optical check"></label>
+                  <label>solvent / buffer<input value="PBS/DMSO 1%"></label>
+                  <label>final concentration<input value="5 uM"></label>
+                  <label>cuvette<input value="quartz 1 cm"></label>
+                  <label>temperature<input value="25 ℃"></label>
+                  <label>raw data<input value="raw/20260605/M001"></label>
+                  <label>conclusion<input value="pending"></label>
+                </div>
+                <details>
+                  <summary>装置条件</summary>
+                  <div class="table-scroll" style="margin-top:8px">
+                    <table>
+                      <thead><tr><th>mode</th><th>range</th><th>excitation</th><th>emission</th><th>slit/bandwidth</th><th>gain</th><th>scan speed</th></tr></thead>
+                      <tbody>
+                        <tr><td><input value="Abs"></td><td><input value="350-950 nm"></td><td><input value="-"></td><td><input value="-"></td><td><input value="1 nm"></td><td><input value="-"></td><td><input value="medium"></td></tr>
+                        <tr><td><input value="FL emission"></td><td><input value="-"></td><td><input value="730 nm"></td><td><input value="760-1000 nm"></td><td><input value="5/5 nm"></td><td><input value="auto"></td><td><input value="medium"></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+                <textarea>観察:
+lambda max:
+fluorescence:
+沈殿/濁り:
+次:</textarea>
+                <div class="drop">このイベントのCSV / スペクトル画像 / screenshotを貼る</div>
+              </div>
+            </article>
+
+            <article class="event-card">
+              <div class="event-head">
+                <b>2026-06-06</b>
+                <span>lot B / lot comparison</span>
+                <span>Abs, FL, PA</span>
+                <span>water, 5 uM</span>
+                <button type="button">詳細</button>
+              </div>
+              <div class="event-body">
+                <div class="mini-grid">
+                  <label>event ID<input value="M2026-06-06-01"></label>
+                  <label>lot<input value="IR1061-thiol-20260605-B"></label>
+                  <label>purpose<input value="lot comparison"></label>
+                  <label>solvent / buffer<input value="water"></label>
+                  <label>final concentration<input value="5 uM"></label>
+                  <label>cuvette<input value="micro cuvette"></label>
+                  <label>temperature<input value="25 ℃"></label>
+                  <label>raw data<input value="raw/20260606/M001"></label>
+                  <label>conclusion<input value=""></label>
+                </div>
+                <details>
+                  <summary>装置条件</summary>
+                  <div class="table-scroll" style="margin-top:8px">
+                    <table>
+                      <thead><tr><th>mode</th><th>range</th><th>excitation</th><th>emission</th><th>slit/bandwidth</th><th>PA wavelength</th><th>averaging</th></tr></thead>
+                      <tbody>
+                        <tr><td><input value="Abs"></td><td><input value="350-950 nm"></td><td><input value="-"></td><td><input value="-"></td><td><input value="1 nm"></td><td><input value="-"></td><td><input value="-"></td></tr>
+                        <tr><td><input value="PA"></td><td><input value="-"></td><td><input value="-"></td><td><input value="-"></td><td><input value="-"></td><td><input value="808 nm"></td><td><input value="32"></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+                <textarea>観察:
+lot Aとの差:
+PA:
+次:</textarea>
+                <div class="drop">このイベントのCSV / スペクトル画像 / screenshotを貼る</div>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -559,28 +706,23 @@ PA変化:
           <section class="subpanel">
             <h3>current interpretation</h3>
             <textarea>この化合物としての結論:
-lot差:
 信頼できる代表値:
+lot差:
 怪しい測定:
 次に確認すべきこと:</textarea>
           </section>
           <section class="subpanel">
-            <h3>auto summary / flags</h3>
+            <h3>運用メモ</h3>
             <ul class="compact-list">
-              <li>representative値は測定イベントから昇格して記録</li>
-              <li>raw dataはイベント単位で保持</li>
-              <li>lot差がある場合は化合物ページ内で比較</li>
-              <li>合成ノートとのリンクを必ず残す</li>
+              <li>普段はイベントカードだけ追加する</li>
+              <li>代表値が固まったら上の「現在の結論」に昇格</li>
+              <li>raw dataはイベント単位で貼る</li>
+              <li>lot差が出たらlot / stock欄に戻って整理する</li>
             </ul>
           </section>
         </div>
 
-        <section>
-          <h3>raw data / figure gallery</h3>
-          <div class="drop">代表スペクトル画像、CSV、装置スクリーンショットを貼る。イベントIDと紐づける。</div>
-        </section>
-
-        <div class="note">案Dは「化合物として何が分かったか」を育てるページ。日付ごとの詳細は measurement events に積むため、合成ノートとは根本的に違う運用になる。</div>
+        <div class="note">D改は「見る場所」と「書く場所」を分ける案。見る時は現在の結論、実験直後はmeasurement eventだけ埋める。</div>
       </section>
     </main>
   </div>
