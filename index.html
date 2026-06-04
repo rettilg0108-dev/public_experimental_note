@@ -105,6 +105,14 @@
       color: var(--accent);
       font-weight: 750;
       font-variant-numeric: tabular-nums;
+      white-space: pre-line;
+    }
+    .end-date {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
     .title {
       color: inherit;
@@ -211,6 +219,22 @@
       padding: 14px 16px;
       border-radius: 8px;
     }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 30;
+      transform: translateX(-50%);
+      padding: 9px 12px;
+      color: #fff;
+      background: rgba(31, 41, 51, .94);
+      border-radius: 6px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s ease;
+    }
+    .toast.show { opacity: 1; }
     footer {
       margin-top: 18px;
       color: var(--muted);
@@ -257,7 +281,7 @@
         <div class="empty" id="completed-empty" hidden>終了登録された実験はありません。</div>
       </section>
       <template id="note-template">
-        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-note-id="2026-06-01-xphos-m346" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned" data-note-date="2026-06-01" data-note-title="XPhos Buchwald-Hartwig coupling: m346" data-note-subtitle="Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun" data-note-tags="Buchwald-Hartwig, XPhos, KOt-Bu, C-N coupling">
+        <article class="note" data-href="notes/2026-06-01_xphos_naotbu_reaction1/index.html" data-note-id="2026-06-01-xphos-m346" data-storage-key="experimental-note:2026-06-01-xphos-reaction1:v3" data-default-status="planned" data-note-date="2026-06-01" data-note-title="XPhos Buchwald-Hartwig coupling: m346" data-note-subtitle="Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun" data-note-tags="Buchwald-Hartwig, XPhos, KOt-Bu, C-N coupling" data-note-template="{&quot;date&quot;:&quot;2026-06-01&quot;,&quot;title&quot;:&quot;XPhos Buchwald-Hartwig coupling: m346&quot;,&quot;method&quot;:&quot;XPhos Buchwald-Hartwig coupling&quot;,&quot;product&quot;:&quot;m346&quot;,&quot;keywords&quot;:&quot;Buchwald-Hartwig, XPhos, KOt-Bu, C-N coupling&quot;,&quot;subtitle&quot;:&quot;Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun&quot;,&quot;status&quot;:&quot;ongoing&quot;,&quot;scale&quot;:&quot;0.500&quot;,&quot;conc&quot;:&quot;0.05&quot;,&quot;solvent&quot;:&quot;toluene&quot;,&quot;reagents&quot;:[{&quot;name&quot;:&quot;1,5-diaminonaphthalene&quot;,&quot;role&quot;:&quot;limiting substrate&quot;,&quot;mw&quot;:&quot;158.20&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;4-bromo-N,N-dimethylaniline&quot;,&quot;role&quot;:&quot;aryl bromide&quot;,&quot;mw&quot;:&quot;200.08&quot;,&quot;eq&quot;:&quot;2.40&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;Pd2dba3&quot;,&quot;role&quot;:&quot;Pd source&quot;,&quot;mw&quot;:&quot;915.72&quot;,&quot;eq&quot;:&quot;2.5&quot;,&quot;unit&quot;:&quot;mol%&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;XPhos&quot;,&quot;role&quot;:&quot;ligand&quot;,&quot;mw&quot;:&quot;476.72&quot;,&quot;eq&quot;:&quot;10.0&quot;,&quot;unit&quot;:&quot;mol%&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;KOt-Bu&quot;,&quot;role&quot;:&quot;base&quot;,&quot;mw&quot;:&quot;112.21&quot;,&quot;eq&quot;:&quot;3.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;Toluene&quot;,&quot;role&quot;:&quot;solvent&quot;,&quot;mw&quot;:&quot;92.14&quot;,&quot;eq&quot;:&quot;0.05&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;target product&quot;,&quot;role&quot;:&quot;product&quot;,&quot;mw&quot;:&quot;394.52&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;}],&quot;operations&quot;:[{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;oven-dried flask に stir bar を入れ、冷却後 Ar 置換する。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;1,5-diaminonaphthalene、4-bromo-N,N-dimethylaniline、Pd2dba3、XPhos、KOt-Bu を加える。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;脱水・脱気 toluene を加え、Ar 下で反応を行う。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;90-110 ℃でovernight撹拌し、翌日LC-MSで反応進行を確認する。&quot;}],&quot;analysis&quot;:&quot;目的物候補: m/z 197.10 (2価), 394/396 付近。m/z 515 は 396系 + dimethylaminophenyl (+119) の過剰アリール化候補。m/z 760 は長波長吸収を持つ未同定生成物として追跡。&quot;,&quot;memo&quot;:&quot;実施時は KOt-Bu。NaOt-Bu表記が残っている場合は修正する。&quot;}">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_xphos_naotbu_reaction1/index.html">XPhos Buchwald-Hartwig coupling: m346</a>
     <span class="subtitle">Pd2dba3/XPhos, KOt-Bu, toluene; reaction 1 rerun</span>
@@ -273,7 +297,7 @@
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-note-id="2026-06-01-thiol-ir1061" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned" data-note-date="2026-06-01" data-note-title="Thiol substitution: Thiol sulfonate IR1061" data-note-subtitle="sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h" data-note-tags="thiol, sulfonate, DMF, cyanine">
+<article class="note" data-href="notes/2026-06-01_thiol_sulfonate_substitution/index.html" data-note-id="2026-06-01-thiol-ir1061" data-storage-key="experimental-note:2026-06-01-thiol-sulfonate-substitution:v4" data-default-status="planned" data-note-date="2026-06-01" data-note-title="Thiol substitution: Thiol sulfonate IR1061" data-note-subtitle="sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h" data-note-tags="thiol, sulfonate, DMF, cyanine" data-note-template="{&quot;date&quot;:&quot;2026-06-01&quot;,&quot;title&quot;:&quot;Thiol substitution: Thiol sulfonate IR1061&quot;,&quot;method&quot;:&quot;Thiol substitution&quot;,&quot;product&quot;:&quot;Thiol sulfonate IR1061&quot;,&quot;keywords&quot;:&quot;thiol, sulfonate, DMF, cyanine&quot;,&quot;subtitle&quot;:&quot;sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h&quot;,&quot;status&quot;:&quot;ongoing&quot;,&quot;scale&quot;:&quot;0.200&quot;,&quot;conc&quot;:&quot;0.01&quot;,&quot;solvent&quot;:&quot;DMF&quot;,&quot;reagents&quot;:[{&quot;name&quot;:&quot;chloro dye BF4 salt&quot;,&quot;role&quot;:&quot;limiting substrate&quot;,&quot;mw&quot;:&quot;749.14&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;sodium 3-mercapto-1-propanesulfonate&quot;,&quot;role&quot;:&quot;thiol nucleophile&quot;,&quot;mw&quot;:&quot;178.20&quot;,&quot;eq&quot;:&quot;1.50&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;NEt3&quot;,&quot;role&quot;:&quot;base&quot;,&quot;mw&quot;:&quot;101.19&quot;,&quot;eq&quot;:&quot;3.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;0.726&quot;},{&quot;name&quot;:&quot;DMF&quot;,&quot;role&quot;:&quot;solvent&quot;,&quot;mw&quot;:&quot;73.09&quot;,&quot;eq&quot;:&quot;0.01&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;sulfonate product&quot;,&quot;role&quot;:&quot;product&quot;,&quot;mw&quot;:&quot;781.07&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;}],&quot;operations&quot;:[{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;乾燥flaskに基質と sodium 3-mercapto-1-propanesulfonate を加え、Ar雰囲気にする。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;DMFを加えて溶解/懸濁し、NEt3を加える。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;室温で撹拌し、2 h後にLC-MSを確認する。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;反応液を室温でovernight撹拌する。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;翌日、反応液を真空エバポレーションで濃縮し、粗生成物をLC-MSで確認する。&quot;}],&quot;analysis&quot;:&quot;基質カチオン: m/z 661.18。生成物 exact mass 780.19。ESI-では [M-H]- 779.18 付近、[M+Cl]- 815.16 付近も候補。2 h後LC-MSで ESI+ m/z 661、ESI- m/z 815 を確認。&quot;,&quot;memo&quot;:&quot;CH2Cl2は使わない。BF4塩MWで秤量補正する。&quot;}">
     <span class="date">2026-06-01</span>
     <a class="title" href="notes/2026-06-01_thiol_sulfonate_substitution/index.html">Thiol substitution: Thiol sulfonate IR1061</a>
     <span class="subtitle">sodium 3-mercaptopropanesulfonate, NEt3, DMF, rt, 3 h</span>
@@ -289,7 +313,7 @@
       <button class="reopen-button" type="button" hidden>進行中に戻す</button>
     </span>
   </article>
-<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-note-id="2026-05-29-buchwald" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned" data-note-date="2026-05-29" data-note-title="Buchwald-Hartwig C-N coupling 検討" data-note-subtitle="Pd2dba3/BINAP, KOt-Bu, toluene" data-note-tags="Buchwald-Hartwig, C-N coupling, azo dye">
+<article class="note" data-href="notes/2026-05-29_buchwald_c_n_coupling/index.html" data-note-id="2026-05-29-buchwald" data-storage-key="experimental-note:2026-05-29-buchwald:v3" data-default-status="planned" data-note-date="2026-05-29" data-note-title="Buchwald-Hartwig C-N coupling 検討" data-note-subtitle="Pd2dba3/BINAP, KOt-Bu, toluene" data-note-tags="Buchwald-Hartwig, C-N coupling, azo dye" data-note-template="{&quot;date&quot;:&quot;2026-05-29&quot;,&quot;title&quot;:&quot;Buchwald-Hartwig C-N coupling 検討&quot;,&quot;method&quot;:&quot;Buchwald-Hartwig C-N coupling&quot;,&quot;product&quot;:&quot;m346-related dye&quot;,&quot;keywords&quot;:&quot;Buchwald-Hartwig, C-N coupling, azo dye&quot;,&quot;subtitle&quot;:&quot;Pd2dba3/BINAP, KOt-Bu, toluene&quot;,&quot;status&quot;:&quot;ongoing&quot;,&quot;scale&quot;:&quot;0.100&quot;,&quot;conc&quot;:&quot;0.05&quot;,&quot;solvent&quot;:&quot;toluene&quot;,&quot;reagents&quot;:[{&quot;name&quot;:&quot;1,5-diaminonaphthalene&quot;,&quot;role&quot;:&quot;limiting substrate&quot;,&quot;mw&quot;:&quot;158.20&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;4-bromo-N,N-dimethylaniline&quot;,&quot;role&quot;:&quot;aryl bromide&quot;,&quot;mw&quot;:&quot;200.08&quot;,&quot;eq&quot;:&quot;2.20&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;Pd2dba3&quot;,&quot;role&quot;:&quot;Pd source&quot;,&quot;mw&quot;:&quot;915.72&quot;,&quot;eq&quot;:&quot;2.5&quot;,&quot;unit&quot;:&quot;mol%&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;BINAP&quot;,&quot;role&quot;:&quot;ligand&quot;,&quot;mw&quot;:&quot;622.67&quot;,&quot;eq&quot;:&quot;10.0&quot;,&quot;unit&quot;:&quot;mol%&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;KOt-Bu&quot;,&quot;role&quot;:&quot;base&quot;,&quot;mw&quot;:&quot;112.21&quot;,&quot;eq&quot;:&quot;3.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;Toluene&quot;,&quot;role&quot;:&quot;solvent&quot;,&quot;mw&quot;:&quot;92.14&quot;,&quot;eq&quot;:&quot;0.05&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;},{&quot;name&quot;:&quot;target product&quot;,&quot;role&quot;:&quot;product&quot;,&quot;mw&quot;:&quot;394.52&quot;,&quot;eq&quot;:&quot;1.00&quot;,&quot;unit&quot;:&quot;eq&quot;,&quot;density&quot;:&quot;&quot;}],&quot;operations&quot;:[{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;乾燥flaskをAr置換し、基質、aryl bromide、Pd2dba3、BINAPを加える。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;脱水・脱気 toluene を加え、KOt-Buを最後に手早く加える。&quot;},{&quot;date&quot;:&quot;&quot;,&quot;time&quot;:&quot;&quot;,&quot;text&quot;:&quot;80-110 ℃で 6-18 h 攪拌し、LC-MSで進行を確認する。&quot;}],&quot;analysis&quot;:&quot;反応1: m/z 655, 670, 1332 が強い。目的物候補は m/z 197/394/410 付近をEICで確認。反応2: m/z 361/359 はBr含有成分候補。&quot;,&quot;memo&quot;:&quot;典型的な Buchwald-Hartwig amination / C-N cross-coupling。OH未保護ではC-O couplingや分解も追跡する。&quot;}">
     <span class="date">2026-05-29</span>
     <a class="title" href="notes/2026-05-29_buchwald_c_n_coupling/index.html">Buchwald-Hartwig C-N coupling 検討</a>
     <span class="subtitle">Pd2dba3/BINAP, KOt-Bu, toluene</span>
@@ -308,6 +332,7 @@
       </template>
     </main>
     <footer>Updated: 2026-06-04. noindex / nofollow</footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
   <dialog id="finish-dialog">
     <form method="dialog" class="dialog-body" id="finish-form">
@@ -339,6 +364,7 @@
     const STATUS_KEY = "experimental-note-index-status:v1";
     const SHEETS_ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const DELETED_NOTES_KEY = "experimental-note-deleted-notes:v1";
+    const DUPLICATE_DRAFT_KEY = "experimental-note-duplicate-draft:v1";
     const search = document.getElementById("search");
     const template = document.getElementById("note-template");
     const ongoingList = document.getElementById("ongoing-list");
@@ -352,6 +378,7 @@
     const finishedOutcome = document.getElementById("finished-outcome");
     const finishedComment = document.getElementById("finished-comment");
     const finishCancel = document.getElementById("finish-cancel");
+    const toast = document.getElementById("toast");
     const state = loadStatusState();
     let activeNote = null;
 
@@ -377,6 +404,14 @@
 
     function saveStatusState() {
       localStorage.setItem(STATUS_KEY, JSON.stringify(state));
+    }
+
+    let toastTimer = null;
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
     }
 
     function markNoteDeleted(noteId) {
@@ -409,6 +444,8 @@
       const status = note.querySelector(".status");
       const finishButton = note.querySelector(".finish-button");
       const reopenButton = note.querySelector(".reopen-button");
+      const date = note.querySelector(".date");
+      note.dataset.startDate ||= date.textContent.trim();
       const completed = Boolean(record) && record.status !== "ongoing";
       note.classList.toggle("completed", completed);
       if (completed) {
@@ -417,6 +454,7 @@
         summary.hidden = false;
         finishButton.hidden = true;
         reopenButton.hidden = false;
+        date.innerHTML = escapeHtmlClient(note.dataset.startDate || "") + '<span class="end-date">終了 ' + escapeHtmlClient(record.finishedDate || record.finished_date || "") + '</span>';
         completedList.append(note);
       } else {
         status.textContent = "進行中";
@@ -424,6 +462,7 @@
         summary.hidden = true;
         finishButton.hidden = false;
         reopenButton.hidden = true;
+        date.textContent = note.dataset.startDate || date.textContent.trim();
         ongoingList.append(note);
       }
     }
@@ -473,6 +512,10 @@
       note.dataset.noteId = row.note_id;
       note.dataset.storageKey = "";
       note.dataset.defaultStatus = row.status || "ongoing";
+      note.dataset.noteDate = row.date || "";
+      note.dataset.noteTitle = row.title || "";
+      note.dataset.noteSubtitle = row.subtitle || "";
+      note.dataset.noteTags = row.keywords || "";
       note.innerHTML =
         '<span class="date"></span>' +
         '<a class="title"></a>' +
@@ -512,6 +555,7 @@
       });
       note.querySelector(".duplicate-button").addEventListener("click", event => {
         event.stopPropagation();
+        showToast("複製元を読み込みます");
         location.href = "dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
       });
       note.querySelector(".delete-button").addEventListener("click", event => {
@@ -522,16 +566,20 @@
         note.remove();
         const index = notes.indexOf(note);
         if (index >= 0) notes.splice(index, 1);
+        showToast("削除しました");
         applySearch();
       });
       return note;
     }
 
-    function encodePrefill(data) {
-      return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    }
-
     function notePrefill(note) {
+      if (note.dataset.noteTemplate) {
+        try {
+          return JSON.parse(note.dataset.noteTemplate);
+        } catch {
+          // Fall back to card text below.
+        }
+      }
       const title = note.dataset.noteTitle || note.querySelector(".title")?.textContent.trim() || "";
       const colonIndex = title.indexOf(":");
       const method = colonIndex >= 0 ? title.slice(0, colonIndex).trim() : title;
@@ -545,6 +593,12 @@
         subtitle: note.dataset.noteSubtitle || note.querySelector(".subtitle")?.textContent.trim() || "",
         status: "ongoing"
       };
+    }
+
+    function duplicateStaticNote(note) {
+      localStorage.setItem(DUPLICATE_DRAFT_KEY, JSON.stringify(notePrefill(note)));
+      showToast("複製テンプレートを作成しました");
+      location.href = "dynamic_note_app/index.html?draft=1";
     }
 
     function deleteNoteCard(note) {
@@ -562,6 +616,7 @@
       note.remove();
       const index = notes.indexOf(note);
       if (index >= 0) notes.splice(index, 1);
+      showToast("削除しました");
       applySearch();
     }
 
@@ -666,7 +721,7 @@
       });
       note.querySelector(".duplicate-button")?.addEventListener("click", event => {
         event.stopPropagation();
-        location.href = "dynamic_note_app/index.html?prefill=" + encodeURIComponent(encodePrefill(notePrefill(note)));
+        duplicateStaticNote(note);
       });
       note.querySelector(".delete-button")?.addEventListener("click", event => {
         event.stopPropagation();
@@ -704,6 +759,7 @@
         updated_at: state[id].updatedAt
       });
       setNoteStatus(activeNote);
+      showToast("終了登録しました");
       activeNote = null;
       dialog.close();
       applySearch();
@@ -718,10 +774,15 @@
     search.addEventListener("input", applySearch);
     document.getElementById("save-sheets-endpoint")?.addEventListener("click", () => {
       localStorage.setItem(SHEETS_ENDPOINT_KEY, sheetsEndpointInput.value.trim());
+      showToast("Sheets URLを保存しました");
       loadDynamicNotesFromSheets();
       loadStatusFromSheets();
     });
-    document.getElementById("load-sheet-status")?.addEventListener("click", loadStatusFromSheets);
+    document.getElementById("load-sheet-status")?.addEventListener("click", () => {
+      showToast("Sheetsを再読込します");
+      loadDynamicNotesFromSheets();
+      loadStatusFromSheets();
+    });
     applySearch();
     loadDynamicNotesFromSheets();
     loadStatusFromSheets();

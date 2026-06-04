@@ -16,6 +16,7 @@
     h2 { margin:0 0 10px; font-size:18px; }
     h3 { margin:0 0 8px; font-size:15px; }
     .muted,.msg { color:var(--muted); font-size:13px; }
+    .msg { min-height:20px; }
     .panel { padding:16px; display:grid; gap:12px; }
     .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     label { display:grid; gap:4px; color:var(--muted); font-size:13px; }
@@ -23,6 +24,7 @@
     textarea { min-height:92px; resize:vertical; }
     button { width:auto; color:var(--accent); font-weight:750; cursor:pointer; }
     button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    button:disabled { opacity:.62; cursor:wait; }
     a { color:var(--accent); font-weight:750; text-decoration:none; }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .layout { display:grid; grid-template-columns:1fr; gap:14px; }
@@ -133,13 +135,20 @@
 
   <script>
     const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const DUPLICATE_DRAFT_KEY = "experimental-note-duplicate-draft:v1";
     const q = s => document.querySelector(s);
-    const msg = text => q("#msg").textContent = text;
+    let msgTimer = null;
+    const msg = text => {
+      q("#msg").textContent = text;
+      clearTimeout(msgTimer);
+      if (text) msgTimer = setTimeout(() => { q("#msg").textContent = ""; }, 5000);
+    };
     const state = { notes: [], currentId: "" };
     const params = new URLSearchParams(location.search);
     const requestedNoteId = params.get("note_id");
     const duplicateFromId = params.get("duplicate_from");
     const prefillData = decodePrefill(params.get("prefill"));
+    const draftRequested = params.get("draft") === "1";
     const defaultReagents = () => [
       { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
       { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
@@ -163,6 +172,16 @@
       if (!value) return null;
       try {
         return JSON.parse(decodeURIComponent(escape(atob(value))));
+      } catch {
+        return null;
+      }
+    }
+    function readDraft() {
+      if (!draftRequested) return null;
+      try {
+        const draft = JSON.parse(localStorage.getItem(DUPLICATE_DRAFT_KEY) || "null");
+        localStorage.removeItem(DUPLICATE_DRAFT_KEY);
+        return draft;
       } catch {
         return null;
       }
@@ -297,13 +316,40 @@
       }
     }
     async function saveCurrent(){
+      const button = q("#saveNote");
+      const oldText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Saving...";
+      msg("Sheetsへ保存リクエストを送信中...");
       const data=collect(); state.currentId=data.note_id;
-      await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, archived:false, updated_at:new Date().toISOString()});
-      await post({kind:"edit", note_id:data.note_id, payload:data, updated_at:new Date().toISOString()});
-      msg("保存リクエストを送りました");
+      try {
+        await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, archived:false, updated_at:new Date().toISOString()});
+        await post({kind:"edit", note_id:data.note_id, payload:data, updated_at:new Date().toISOString()});
+        msg("保存リクエストを送りました。top pageでSheets再読込すると表示されます。");
+      } finally {
+        button.disabled = false;
+        button.textContent = oldText;
+      }
     }
     q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
-    q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); state.currentId=""; loadNotes(); };
+    q("#archiveNote").onclick=async()=>{
+      const button = q("#archiveNote");
+      const oldText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Archiving...";
+      try {
+        const data=collect();
+        await post({kind:"note", ...data, archived:true, updated_at:new Date().toISOString()});
+        msg("アーカイブしました");
+        state.currentId="";
+        loadNotes();
+      } catch(e) {
+        msg(e.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = oldText;
+      }
+    };
     q("#reagentTable").oninput=recalc;
     q("#reagentTable").onclick=e=>{ const b=e.target.closest("[data-del]"); if(!b) return; b.closest("tr").remove(); recalc(); };
     q("#operationTable").onclick=e=>{ const b=e.target.closest("[data-op-del]"); if(!b) return; b.closest("tr").remove(); };
@@ -322,8 +368,9 @@
     }
     document.addEventListener("paste", e=>{ const files=[...e.clipboardData.files]; if(files.length) addFiles(files,"images"); });
     setEditor(blankNote());
-    if (prefillData) {
-      setEditor(asDuplicate({...blankNote(), ...prefillData}));
+    const draftData = readDraft();
+    if (draftData || prefillData) {
+      setEditor(asDuplicate({...blankNote(), ...(draftData || prefillData)}));
       msg("複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
     }
     if(endpoint()) loadNotes();
