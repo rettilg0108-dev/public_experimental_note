@@ -40,6 +40,11 @@
     .event-head { display:grid; grid-template-columns:120px 1.6fr 1fr auto; gap:8px; align-items:end; padding:10px 12px; background:#f6f8fa; border-bottom:1px solid var(--line); }
     .event-body { padding:12px; display:grid; gap:12px; }
     .mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .measurement-tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .measurement-blocks { display:grid; gap:8px; }
+    .measurement-block { border:1px solid var(--line); border-radius:8px; padding:10px; background:#fbfcfd; display:grid; gap:8px; }
+    .measurement-block-head { display:flex; gap:8px; justify-content:space-between; align-items:center; }
+    .measurement-block-head strong { color:var(--accent); }
     .structure-preview { width:100%; max-height:260px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; }
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
@@ -125,7 +130,7 @@
       <section>
         <h3>measurement events</h3>
         <div class="preset-bar">
-          <label>測定テンプレ<select id="eventTemplate"><option>Abs + FL standard</option><option>Abs only</option><option>FL excitation</option><option>PA standard</option><option>enzyme/addition response</option></select></label>
+          <label>測定テンプレ<select id="eventTemplate"><option>Abs + FL standard</option><option>Abs only</option><option>FL excitation</option><option>PA standard</option><option>Lifetime</option><option>enzyme/addition response</option></select></label>
           <button type="button" id="duplicateEvent">最後のeventを複製</button>
           <button type="button" id="addEvent">新規event</button>
         </div>
@@ -155,6 +160,21 @@
       temperature:["25 ℃","37 ℃","rt"],
       degas:["none","Ar bubbling","N2 bubbling","freeze-pump-thaw"]
     };
+    const measurementSpecs = {
+      abs: { label:"Abs", fields:[["instrument","Instrument"],["place","Place"],["range","Range"],["interval","Interval"],["repeat","Repeat"]] },
+      fl: { label:"FL", fields:[["instrument","Instrument"],["place","Place"],["lambda_ex","λex"],["em_range","Em range"],["interval","Interval"],["ex_width","Ex width"],["em_width","Em width"],["sensitivity","Sensitivity"]] },
+      ex: { label:"Ex", fields:[["instrument","Instrument"],["place","Place"],["range","Range"],["lambda_em","λem"],["interval","Interval"],["ex_width","Ex width"],["em_width","Em width"],["sensitivity","Sensitivity"]] },
+      pa: { label:"PA", fields:[["instrument","Instrument"],["place","Place"],["range","Range"],["interval","Interval"]] },
+      lifetime: { label:"Lifetime", fields:[["instrument","Instrument"],["place","Place"],["lambda_ex","λex"],["em_range","Em range"],["counts","Counts"],["ex_repeat","Ex repeat"]] }
+    };
+    const eventTemplates = {
+      "Abs + FL standard": ["abs","fl"],
+      "Abs only": ["abs"],
+      "FL excitation": ["ex"],
+      "PA standard": ["pa"],
+      "Lifetime": ["lifetime"],
+      "enzyme/addition response": ["abs","fl"]
+    };
     let msgTimer = null;
     function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
     function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
@@ -173,7 +193,35 @@
       };
     }
     function summaryBlank(condition="new condition"){ return {condition, lambda_abs_max:"", lambda_em_max:"", phi_fl:"", pa:"", pa_abs:"", confidence:"tentative", source:""}; }
-    function eventBlank(){ return {date:today(), title:"new measurement", mode:"Abs, FL", lot:preferredLot(), solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:"Abs + FL standard", instrumentRows:[{mode:"Abs",range:"350-950 nm",excitation:"-",emission:"-",slit:"1 nm",gain:"-",scan:"medium"},{mode:"FL emission",range:"-",excitation:"730 nm",emission:"760-1000 nm",slit:"5/5 nm",gain:"auto",scan:"medium"}], notes:"", raw:""}; }
+    function eventBlank(template=q("#eventTemplate")?.value || "Abs + FL standard"){
+      const techniques = eventTemplates[template] || eventTemplates["Abs + FL standard"];
+      return {date:today(), title:"new measurement", mode:techniques.map(t=>measurementSpecs[t].label).join(", "), lot:preferredLot(), solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:template, instrumentRows:techniques.map(blockBlank), notes:"", raw:""};
+    }
+    function blockBlank(type="abs"){
+      const block = {technique:type};
+      for (const [key] of measurementSpecs[type]?.fields || measurementSpecs.abs.fields) block[key] = "";
+      return block;
+    }
+    function normalizeBlock(row={}){
+      if (row.technique && measurementSpecs[row.technique]) return {...blockBlank(row.technique), ...row};
+      const mode = String(row.mode || "").toLowerCase();
+      let technique = "abs";
+      if (mode.includes("lifetime")) technique = "lifetime";
+      else if (mode.includes("pa")) technique = "pa";
+      else if (mode.includes("excitation") || mode === "ex") technique = "ex";
+      else if (mode.includes("fl")) technique = "fl";
+      const block = blockBlank(technique);
+      block.instrument = row.instrument || "";
+      block.range = row.range || row.emission || "";
+      block.lambda_ex = row.excitation || "";
+      block.em_range = row.emission || "";
+      block.lambda_em = row.emission || "";
+      block.ex_width = row.slit || "";
+      block.em_width = row.slit || "";
+      block.sensitivity = row.gain || "";
+      block.interval = row.scan || "";
+      return block;
+    }
     function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
     function jsonp(params, cb){
       const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
@@ -242,11 +290,13 @@
             <label>reaction molecule/additive<input data-event="additive" value="${escapeAttr(r.additive)}"></label>
             <label>degas<select data-event="degas" data-preset="degas"></select></label>
           </div>
-          <details>
-            <summary>装置条件テンプレ</summary>
+          <details open>
+            <summary>装置条件</summary>
             <label>template<input data-event="instrumentTemplate" value="${escapeAttr(r.instrumentTemplate)}"></label>
-            <div class="table-scroll"><table><thead><tr><th>mode</th><th>range</th><th>excitation</th><th>emission</th><th>slit/bandwidth</th><th>gain</th><th>scan speed</th><th></th></tr></thead><tbody class="instrument-body"></tbody></table></div>
-            <div class="actions"><button type="button" class="add-instrument-row">装置条件行を追加</button></div>
+            <div class="measurement-tools">
+              ${Object.entries(measurementSpecs).map(([type, spec])=>`<button type="button" class="add-measurement" data-add-measurement="${type}">${spec.label}を追加</button>`).join("")}
+            </div>
+            <div class="measurement-blocks instrument-body"></div>
           </details>
           <label>観察・メモ<textarea data-event="notes" placeholder="観察、lambda max、蛍光、沈殿/濁り、次にやること">${escapeText(r.notes)}</textarea></label>
           <label>raw data / figure link<textarea data-event="raw" placeholder="raw data folder URL、画像リンク、ファイル名など">${escapeText(r.raw)}</textarea></label>
@@ -265,20 +315,29 @@
           if(el && value && ![...el.options].some(option => option.value === value)) el.add(new Option(value, value));
           if(el) el.value=value;
         });
-        renderInstrumentRows(card, rows[i]?.instrumentRows || []);
+        renderInstrumentRows(card, (rows[i]?.instrumentRows || []).map(normalizeBlock));
       });
       autosizeAll();
     }
     function renderInstrumentRows(card, rows){
-      card.querySelector(".instrument-body").innerHTML=(rows||[]).map(r=>`<tr>
-        ${["mode","range","excitation","emission","slit","gain","scan"].map(k=>`<td><input data-inst="${k}" value="${escapeAttr(r[k])}"></td>`).join("")}
-        <td><button type="button" class="delete-inst-row danger">削除</button></td>
-      </tr>`).join("");
+      card.querySelector(".instrument-body").innerHTML=(rows||[]).map(r=>{
+        const block = normalizeBlock(r);
+        const spec = measurementSpecs[block.technique] || measurementSpecs.abs;
+        return `<article class="measurement-block" data-technique="${escapeAttr(block.technique)}">
+          <div class="measurement-block-head">
+            <strong>${escapeText(spec.label)}</strong>
+            <button type="button" class="delete-inst-row danger">削除</button>
+          </div>
+          <div class="mini-grid">
+            ${spec.fields.map(([key, label])=>`<label>${label}<input data-inst="${key}" value="${escapeAttr(block[key])}"></label>`).join("")}
+          </div>
+        </article>`;
+      }).join("");
     }
     function readEvents(){
       return [...q("#eventList").querySelectorAll(".event-card")].map(card=>{
         const base=Object.fromEntries([...card.querySelectorAll("[data-event]")].map(el=>[el.dataset.event,el.value]));
-        base.instrumentRows=[...card.querySelectorAll(".instrument-body tr")].map(row=>Object.fromEntries([...row.querySelectorAll("[data-inst]")].map(el=>[el.dataset.inst,el.value])));
+        base.instrumentRows=[...card.querySelectorAll(".measurement-block")].map(block=>({technique:block.dataset.technique, ...Object.fromEntries([...block.querySelectorAll("[data-inst]")].map(el=>[el.dataset.inst,el.value]))}));
         return base;
       });
     }
@@ -352,8 +411,13 @@
       if(e.target.closest(".delete-summary")) e.target.closest(".summary-card").remove();
       if(e.target.closest(".delete-row")) e.target.closest("tr").remove();
       if(e.target.closest(".delete-event") && confirm("この測定シートを削除しますか？")) e.target.closest(".event-card").remove();
-      if(e.target.closest(".delete-inst-row")) e.target.closest("tr").remove();
-      if(e.target.closest(".add-instrument-row")) { const card=e.target.closest(".event-card"); const rows=readEvents()[[...q("#eventList").querySelectorAll(".event-card")].indexOf(card)].instrumentRows; rows.push({mode:"",range:"",excitation:"",emission:"",slit:"",gain:"",scan:""}); renderInstrumentRows(card, rows); }
+      if(e.target.closest(".delete-inst-row")) e.target.closest(".measurement-block").remove();
+      if(e.target.closest(".add-measurement")) {
+        const card=e.target.closest(".event-card");
+        const rows=readEvents()[[...q("#eventList").querySelectorAll(".event-card")].indexOf(card)].instrumentRows;
+        rows.push(blockBlank(e.target.closest(".add-measurement").dataset.addMeasurement));
+        renderInstrumentRows(card, rows);
+      }
     });
     document.addEventListener("input", e=>{
       if(e.target.matches("textarea")) autosizeAll();
