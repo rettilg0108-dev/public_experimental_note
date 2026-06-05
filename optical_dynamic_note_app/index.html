@@ -180,7 +180,7 @@
       const name="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
       const script=document.createElement("script");
       window[name]=data=>{ cb(data); script.remove(); delete window[name]; };
-      script.src=url+"?"+new URLSearchParams({...params,callback:name}).toString();
+      script.src=url+"?"+new URLSearchParams({...params,callback:name,_:Date.now()}).toString();
       script.onerror=()=>{ msg("Sheets読込失敗"); delete window[name]; };
       document.body.append(script);
     }
@@ -290,10 +290,13 @@
     function readPresets(){
       const current={};
       for(const key of Object.keys(presetDefaults)){
+        if (key === "lot") {
+          current.lot = [...new Set(readLots().map(row => row.lot).filter(Boolean))];
+          continue;
+        }
         const values=[...document.querySelector(`select[data-preset="${key}"]`)?.options||[]].map(o=>o.value).filter(Boolean);
         current[key]=[...new Set(values)];
       }
-      current.lot = [...new Set([...(current.lot || []), ...readLots().map(row => row.lot).filter(Boolean)])];
       return current;
     }
     function setEditor(data){
@@ -325,7 +328,8 @@
       try{
         await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:"optical", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"optical", payload:data, updated_at:new Date().toISOString()});
-        msg("保存リクエストを送りました。Top pageでSheets再読込すると表示されます。");
+        history.replaceState(null, "", "?note_id=" + encodeURIComponent(data.note_id));
+        msg("保存リクエストを送りました。このページは同じノートIDで更新されます。");
       } finally { button.disabled=false; button.textContent=old; }
     }
     function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
@@ -346,7 +350,10 @@
     document.addEventListener("input", e=>{
       if(e.target.matches("textarea")) autosizeAll();
       if(e.target.matches("#displayName,#compoundId,#project")) q("#pageTitle").textContent=noteTitle();
-      if(e.target.matches('[data-lot="lot"]')) renderOptions(readPresets());
+      if(e.target.matches('[data-lot="lot"]')) {
+        clearTimeout(window.__lotOptionTimer);
+        window.__lotOptionTimer = setTimeout(() => renderOptions(readPresets()), 250);
+      }
     });
     q("#structureFile").addEventListener("change", event => {
       const file = event.target.files?.[0];

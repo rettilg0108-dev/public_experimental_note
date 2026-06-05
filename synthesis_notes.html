@@ -505,7 +505,7 @@
         delete window[callbackName];
       };
       const script = document.createElement("script");
-      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "callback=" + callbackName;
+      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "callback=" + callbackName + "&_=" + Date.now();
       script.onerror = () => delete window[callbackName];
       document.body.append(script);
     }
@@ -668,7 +668,7 @@
         delete window[callbackName];
       };
       const script = document.createElement("script");
-      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "kind=notes&callback=" + callbackName;
+      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "kind=notes&callback=" + callbackName + "&_=" + Date.now();
       script.onerror = () => delete window[callbackName];
       document.body.append(script);
     }

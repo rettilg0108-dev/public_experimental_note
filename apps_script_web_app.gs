@@ -144,7 +144,15 @@ function upsertStatus_(body) {
 
 function listNotes_() {
   const sheet = sheet_(NOTES_SHEET, noteHeaders_());
-  return rowsAsObjects_(sheet)
+  const latest = {};
+  rowsAsObjects_(sheet).forEach(row => {
+    if (!row.note_id) return;
+    const previous = latest[row.note_id];
+    if (!previous || String(row.updated_at || '').localeCompare(String(previous.updated_at || '')) >= 0) {
+      latest[row.note_id] = row;
+    }
+  });
+  return Object.values(latest)
     .filter(row => String(row.archived).toLowerCase() !== 'true')
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 }
@@ -152,7 +160,9 @@ function listNotes_() {
 function getEdit_(noteId) {
   if (!noteId) return {};
   const sheet = sheet_(EDITS_SHEET, editHeaders_());
-  const row = rowsAsObjects_(sheet).find(item => String(item.note_id) === String(noteId));
+  const row = rowsAsObjects_(sheet)
+    .filter(item => String(item.note_id) === String(noteId))
+    .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))[0];
   if (!row) return {};
   let payload = {};
   try {
