@@ -227,6 +227,24 @@
       color: var(--accent);
       font-size: 13px;
     }
+    .card-title {
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .card-title input {
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .card-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .danger {
+      color: #8a2430;
+      border-color: #e2b9c0;
+      background: #fff8f9;
+    }
     .preset-bar {
       display: flex;
       flex-wrap: wrap;
@@ -253,7 +271,7 @@
     }
     .event-head {
       display: grid;
-      grid-template-columns: 1.6fr 108px 1fr 1fr auto;
+      grid-template-columns: 108px 1.6fr 1fr 1fr auto;
       gap: 8px;
       align-items: center;
       padding: 10px 12px;
@@ -282,6 +300,14 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 8px;
+    }
+    .wide {
+      grid-column: 1 / -1;
+    }
+    .table-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
     }
     @media (max-width: 820px) {
       .wrap { width: 100%; margin: 0; }
@@ -563,11 +589,9 @@ PA変化:
           <section class="subpanel">
             <h3>Compound profile</h3>
             <div class="grid">
-              <label>project<input value="IR dye optical profiling"></label>
+              <label class="wide">project<input value="IR dye optical profiling / enzyme-responsive NIR dyes"></label>
               <label>compound ID<input value="IR1061-thiol"></label>
               <label>display name<input value="Thiol sulfonate IR1061"></label>
-              <label>series<input value="IR1061 / cyanine"></label>
-              <label>status<select><option>active</option><option>needs confirmation</option><option>archived</option></select></label>
               <label>M.W.<input value="781.07"></label>
               <label>storage<input value="-20 ℃, dark"></label>
               <label>source note<input value="Thiol substitution: Thiol sulfonate IR1061"></label>
@@ -586,34 +610,40 @@ PA変化:
 
         <section>
           <h3>条件別の代表値</h3>
-          <div class="summary-grid">
+          <div class="preset-bar">
+            <button type="button" id="addSummary">代表値カードを追加</button>
+            <span class="muted">溶媒、濃度、添加条件ごとに必要な分だけ増やす。</span>
+          </div>
+          <div class="summary-grid" id="summaryGrid">
             <div class="summary-card">
-              <strong>PBS, 5 uM, 25 ℃</strong>
+              <label class="card-title">condition<input value="PBS, 5 uM, 25 ℃"></label>
               <label>lambda_abs_max<input value=""></label>
               <label>lambda_em_max<input value=""></label>
               <label>Phi_fl<input value=""></label>
               <label>PA<input value=""></label>
               <label>PA / Abs<input value=""></label>
               <label>confidence<select><option>tentative</option><option>confirmed</option><option>low</option></select></label>
+              <div class="card-actions"><button type="button" class="delete-summary danger">削除</button></div>
             </div>
             <div class="summary-card">
-              <strong>water, 5 uM, 25 ℃</strong>
+              <label class="card-title">condition<input value="water, 5 uM, 25 ℃"></label>
               <label>lambda_abs_max<input value=""></label>
               <label>lambda_em_max<input value=""></label>
               <label>Phi_fl<input value=""></label>
               <label>PA<input value=""></label>
               <label>PA / Abs<input value=""></label>
               <label>confidence<select><option>tentative</option><option>confirmed</option><option>low</option></select></label>
+              <div class="card-actions"><button type="button" class="delete-summary danger">削除</button></div>
             </div>
             <div class="summary-card">
-              <strong>enzyme condition</strong>
-              <label>condition<input value="enzyme, 37 ℃, 30 min"></label>
+              <label class="card-title">condition<input value="enzyme, 37 ℃, 30 min"></label>
               <label>lambda_abs_max<input value=""></label>
               <label>lambda_em_max<input value=""></label>
               <label>Phi_fl<input value=""></label>
               <label>PA<input value=""></label>
               <label>PA / Abs<input value=""></label>
               <label>source event<input value=""></label>
+              <div class="card-actions"><button type="button" class="delete-summary danger">削除</button></div>
             </div>
           </div>
         </section>
@@ -638,13 +668,14 @@ PA変化:
           <h3>lot / stock</h3>
           <div class="table-scroll">
             <table>
-              <thead><tr><th>lot</th><th>source synthesis</th><th>prepared</th><th>stock</th><th>solvent</th><th>state</th><th>storage</th><th>note</th></tr></thead>
-              <tbody>
-                <tr><td><input value="IR1061-thiol-20260602-A"></td><td><input value="2026-06-01 fraction A"></td><td><input value="2026-06-02"></td><td><input value="1.0 mM"></td><td><input value="DMSO"></td><td><input value="crude"></td><td><input value="-20 ℃ dark"></td><td><input value="BF4/Cl state unclear"></td></tr>
-                <tr><td><input value="IR1061-thiol-20260605-B"></td><td><input value="repurified sample"></td><td><input value="2026-06-05"></td><td><input value="0.5 mM"></td><td><input value="water"></td><td><input value="purified"></td><td><input value="4 ℃ dark"></td><td><input></td></tr>
+              <thead><tr><th>lot</th><th>source synthesis</th><th>prepared</th><th>stock</th><th>solvent</th><th>state</th><th>storage</th><th>note</th><th></th></tr></thead>
+              <tbody id="lotBody">
+                <tr><td><input value="IR1061-thiol-20260602-A"></td><td><input value="2026-06-01 fraction A"></td><td><input value="2026-06-02"></td><td><input value="1.0 mM"></td><td><input value="DMSO"></td><td><input value="crude"></td><td><input value="-20 ℃ dark"></td><td><input value="BF4/Cl state unclear"></td><td><button type="button" class="delete-row danger">削除</button></td></tr>
+                <tr><td><input value="IR1061-thiol-20260605-B"></td><td><input value="repurified sample"></td><td><input value="2026-06-05"></td><td><input value="0.5 mM"></td><td><input value="water"></td><td><input value="purified"></td><td><input value="4 ℃ dark"></td><td><input></td><td><button type="button" class="delete-row danger">削除</button></td></tr>
               </tbody>
             </table>
           </div>
+          <div class="table-actions"><button type="button" id="addLotRow">lot行を追加</button></div>
         </section>
 
         <section>
@@ -658,16 +689,14 @@ PA変化:
           <div class="event-list">
             <article class="event-card">
               <div class="event-head">
-                <span class="event-purpose">目的: first optical check</span>
-                <b>2026-06-05</b>
+                <label>date<input type="date" value="2026-06-05"></label>
+                <label class="event-purpose">sheet title / purpose<input value="first optical check"></label>
                 <span>Abs, FL</span>
                 <span>PBS/DMSO 1%, 5 uM</span>
-                <button type="button" class="toggle-event">開く</button>
+                <button type="button" class="delete-event danger">削除</button>
               </div>
-              <div class="event-body" hidden>
+              <div class="event-body">
                 <div class="mini-grid">
-                  <label>event ID<input value="M2026-06-05-01"></label>
-                  <label>目的<input value="first optical check"></label>
                   <label>lot<select data-preset="lot"><option>IR1061-thiol-20260602-A</option><option>IR1061-thiol-20260605-B</option></select></label>
                   <label>solvent / buffer<select data-preset="solvent"><option>PBS/DMSO 1%</option><option>water</option><option>DMSO</option><option>PBS pH 7.4</option></select></label>
                   <label>final concentration<input value="5 uM"></label>
@@ -676,8 +705,6 @@ PA変化:
                   <label>enzyme<input value="-"></label>
                   <label>reaction molecule/additive<input value="-"></label>
                   <label>degas<select data-preset="degas"><option>none</option><option>Ar bubbling</option><option>N2 bubbling</option></select></label>
-                  <label>raw data<input value="raw/20260605/M001"></label>
-                  <label>conclusion<input value="pending"></label>
                 </div>
                 <details>
                   <summary>装置条件テンプレ: Abs + FL standard</summary>
@@ -702,16 +729,14 @@ fluorescence:
 
             <article class="event-card">
               <div class="event-head">
-                <span class="event-purpose">目的: lot comparison</span>
-                <b>2026-06-06</b>
+                <label>date<input type="date" value="2026-06-06"></label>
+                <label class="event-purpose">sheet title / purpose<input value="lot comparison"></label>
                 <span>Abs, FL, PA</span>
                 <span>water, 5 uM</span>
-                <button type="button" class="toggle-event">開く</button>
+                <button type="button" class="delete-event danger">削除</button>
               </div>
-              <div class="event-body" hidden>
+              <div class="event-body">
                 <div class="mini-grid">
-                  <label>event ID<input value="M2026-06-06-01"></label>
-                  <label>目的<input value="lot comparison"></label>
                   <label>lot<select data-preset="lot"><option>IR1061-thiol-20260605-B</option><option>IR1061-thiol-20260602-A</option></select></label>
                   <label>solvent / buffer<select data-preset="solvent"><option>water</option><option>PBS/DMSO 1%</option><option>DMSO</option><option>PBS pH 7.4</option></select></label>
                   <label>final concentration<input value="5 uM"></label>
@@ -720,8 +745,6 @@ fluorescence:
                   <label>enzyme<input value="-"></label>
                   <label>reaction molecule/additive<input value="-"></label>
                   <label>degas<select data-preset="degas"><option>none</option><option>Ar bubbling</option><option>N2 bubbling</option></select></label>
-                  <label>raw data<input value="raw/20260606/M001"></label>
-                  <label>conclusion<input value=""></label>
                 </div>
                 <details>
                   <summary>装置条件テンプレ: Abs + PA standard</summary>
@@ -780,25 +803,45 @@ lot差:
       });
     });
     document.addEventListener("click", event => {
-      const toggle = event.target.closest(".toggle-event");
-      if (toggle) {
-        const body = toggle.closest(".event-card")?.querySelector(".event-body");
-        if (body) {
-          body.hidden = !body.hidden;
-          toggle.textContent = body.hidden ? "開く" : "閉じる";
-        }
+      const summaryDelete = event.target.closest(".delete-summary");
+      if (summaryDelete) {
+        summaryDelete.closest(".summary-card")?.remove();
+        return;
       }
+      const rowDelete = event.target.closest(".delete-row");
+      if (rowDelete) {
+        rowDelete.closest("tr")?.remove();
+        return;
+      }
+      const eventDelete = event.target.closest(".delete-event");
+      if (eventDelete && confirm("この測定シートを削除しますか？")) {
+        eventDelete.closest(".event-card")?.remove();
+      }
+    });
+    document.querySelector("#addSummary")?.addEventListener("click", () => {
+      const grid = document.querySelector("#summaryGrid");
+      const first = grid?.querySelector(".summary-card");
+      if (!grid || !first) return;
+      const clone = first.cloneNode(true);
+      clone.querySelectorAll("input").forEach(input => input.value = "");
+      clone.querySelector(".card-title input").value = "new condition";
+      grid.append(clone);
+    });
+    document.querySelector("#addLotRow")?.addEventListener("click", () => {
+      const tbody = document.querySelector("#lotBody");
+      const last = tbody?.querySelector("tr:last-child");
+      if (!tbody || !last) return;
+      const clone = last.cloneNode(true);
+      clone.querySelectorAll("input").forEach(input => input.value = "");
+      tbody.append(clone);
     });
     document.querySelector("#duplicateEvent")?.addEventListener("click", () => {
       const list = document.querySelector("#draft-d .event-list");
       const last = list?.querySelector(".event-card:last-child");
       if (!list || !last) return;
       const clone = last.cloneNode(true);
-      const idInput = clone.querySelector('input[value^="M"]');
-      if (idInput) idInput.value = `M${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-copy`;
-      clone.querySelector(".event-purpose").textContent = "目的: copied event";
-      clone.querySelector(".event-body").hidden = true;
-      clone.querySelector(".toggle-event").textContent = "開く";
+      const title = clone.querySelector(".event-purpose input");
+      if (title) title.value = `${title.value} copy`;
       list.append(clone);
     });
     document.querySelector("#newEvent")?.addEventListener("click", () => {
@@ -807,14 +850,10 @@ lot差:
       if (!list || !first) return;
       const clone = first.cloneNode(true);
       const today = new Date().toISOString().slice(0, 10);
-      clone.querySelector(".event-purpose").textContent = "目的: ";
-      clone.querySelector(".event-head b").textContent = today;
-      clone.querySelectorAll("input").forEach(input => {
-        input.value = input.value.startsWith("M") ? `M${today.replaceAll("-", "")}-new` : "";
-      });
+      clone.querySelector('input[type="date"]').value = today;
+      clone.querySelectorAll('input:not([type="date"])').forEach(input => input.value = "");
+      clone.querySelector(".event-purpose input").value = "new measurement";
       clone.querySelectorAll("textarea").forEach(textarea => textarea.value = "");
-      clone.querySelector(".event-body").hidden = false;
-      clone.querySelector(".toggle-event").textContent = "閉じる";
       list.append(clone);
     });
     document.querySelector("#addPreset")?.addEventListener("click", () => {
