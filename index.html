@@ -11,7 +11,7 @@
     * { box-sizing:border-box; }
     body { margin:0; color:var(--ink); background:var(--bg); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; line-height:1.55; }
     .wrap { width:min(980px, calc(100% - 32px)); margin:32px auto; }
-    header,.card { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header,.card,.settings { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
     header { border-top:5px solid var(--accent); padding:26px 28px; margin-bottom:16px; }
     h1 { margin:0 0 6px; font-size:28px; letter-spacing:0; }
     h2 { margin:0 0 8px; font-size:20px; }
@@ -21,11 +21,20 @@
     .card { display:grid; gap:10px; padding:20px; color:inherit; text-decoration:none; }
     .card:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(20,35,50,.07); }
     .button { justify-self:start; border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--accent); font-weight:750; background:#fff; }
+    .settings { margin-top:16px; padding:16px; }
+    .settings summary { cursor:pointer; font-weight:750; color:var(--accent); }
+    .settings-row { display:flex; gap:10px; align-items:center; margin-top:12px; }
+    input,button { border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:inherit; background:#fff; }
+    input { flex:1 1 auto; min-width:0; }
+    button { width:auto; cursor:pointer; color:var(--accent); font-weight:750; }
+    .toast { min-height:20px; margin-top:8px; color:var(--muted); font-size:13px; }
     footer { margin-top:18px; color:var(--muted); font-size:12px; }
     @media (max-width:640px) {
       .wrap { width:100%; margin:0; }
       header { border-left:0; border-right:0; border-radius:0; }
       .grid { grid-template-columns:1fr; margin:0 16px; }
+      .settings { margin-left:16px; margin-right:16px; }
+      .settings-row { flex-direction:column; align-items:stretch; }
       footer { margin-left:16px; margin-right:16px; }
     }
   </style>
@@ -48,7 +57,26 @@
         <span class="button">Open optical notes</span>
       </a>
     </main>
+    <details class="settings">
+      <summary>Sheets settings</summary>
+      <div class="settings-row">
+        <input id="sheets-endpoint" type="url" placeholder="Apps Script Web App URL">
+        <button type="button" id="save-sheets-endpoint">URL保存</button>
+      </div>
+      <div class="toast" id="settings-message"></div>
+    </details>
     <footer>noindex / nofollow</footer>
   </div>
+  <script>
+    const SHEETS_ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const endpointInput = document.getElementById("sheets-endpoint");
+    const message = document.getElementById("settings-message");
+    endpointInput.value = localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
+    document.getElementById("save-sheets-endpoint").addEventListener("click", () => {
+      localStorage.setItem(SHEETS_ENDPOINT_KEY, endpointInput.value.trim());
+      message.textContent = "Sheets URLを保存しました。";
+      setTimeout(() => { message.textContent = ""; }, 1800);
+    });
+  </script>
 </body>
 </html>

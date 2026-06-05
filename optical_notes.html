@@ -47,9 +47,14 @@
     }
     .tools {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       align-items: center;
       margin: 16px 0;
+    }
+    .tools input[type="search"] {
+      flex: 1 1 280px;
+      min-width: 180px;
     }
     input, select, textarea, button {
       width: 100%;
@@ -66,6 +71,12 @@
       background: #fff;
       text-decoration: none;
       font-weight: 700;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     button:hover, .open-note:hover {
       border-color: var(--accent);
@@ -248,6 +259,7 @@
       .date { grid-row: auto; }
       .complete-summary, .actions { grid-column: 1; }
       .actions > * { flex: 1 1 auto; justify-content: center; }
+      .tools > * { flex: 1 1 auto; }
     }
   </style>
 </head>
@@ -262,16 +274,8 @@
       <a class="open-note" href="synthesis_notes.html">合成ノートへ</a>
       <input id="search" type="search" placeholder="Search by date, title, compound, condition..." aria-label="Search notes">
       <button type="button" id="load-sheet-status">Sheets再読込</button>
-      <a class="open-note new-note-button" href="optical_dynamic_note_app/index.html">新規 光学分析ノート</a>
-      <a class="open-note new-note-button" href="optical_note_templates/index.html">光学分析テンプレ案</a>
+      <a class="open-note new-note-button" href="optical_dynamic_note_app/index.html">新規ノート</a>
     </div>
-    <details class="section">
-      <summary>Sheets settings</summary>
-      <div class="tools">
-        <input id="sheets-endpoint" type="url" placeholder="Apps Script Web App URL">
-        <button type="button" id="save-sheets-endpoint">URL保存</button>
-      </div>
-    </details>
     <main>
       <section class="section" aria-labelledby="ongoing-heading">
         <h2 id="ongoing-heading">進行中</h2>
@@ -427,7 +431,7 @@
       return localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
     }
 
-    sheetsEndpointInput.value = sheetEndpoint();
+    if (sheetsEndpointInput) sheetsEndpointInput.value = sheetEndpoint();
 
     function todayString() {
       return new Date().toLocaleDateString("sv-SE");
@@ -784,6 +788,7 @@
     }
     search.addEventListener("input", applySearch);
     document.getElementById("save-sheets-endpoint")?.addEventListener("click", () => {
+      if (!sheetsEndpointInput) return;
       localStorage.setItem(SHEETS_ENDPOINT_KEY, sheetsEndpointInput.value.trim());
       showToast("Sheets URLを保存しました");
       loadDynamicNotesFromSheets();
