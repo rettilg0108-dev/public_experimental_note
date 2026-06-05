@@ -510,10 +510,15 @@
       document.body.append(script);
     }
 
+    function isOpticalRow(row) {
+      const text = [row.note_type, row.note_id, row.title, row.method, row.keywords].filter(Boolean).join(" ").toLowerCase();
+      return row.note_type === "optical" || text.includes("optical") || text.includes("光学");
+    }
+
     function createDynamicNote(row) {
-      if (row.note_type === "optical") return null;
+      if (isOpticalRow(row)) return null;
       if (!row.note_id || loadDeletedNoteIds().has(row.note_id) || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
-      const appPath = row.note_type === "optical" ? "optical_dynamic_note_app/index.html" : "dynamic_note_app/index.html";
+      const appPath = "dynamic_note_app/index.html";
       const href = appPath + "?note_id=" + encodeURIComponent(row.note_id);
       const note = document.createElement("article");
       note.className = "note";
@@ -565,7 +570,7 @@
       note.querySelector(".duplicate-button").addEventListener("click", event => {
         event.stopPropagation();
         showToast("複製元を読み込みます");
-        const duplicateAppPath = row.note_type === "optical" ? "optical_dynamic_note_app/index.html" : "dynamic_note_app/index.html";
+        const duplicateAppPath = "dynamic_note_app/index.html";
         location.href = duplicateAppPath + "?duplicate_from=" + encodeURIComponent(row.note_id);
       });
       note.querySelector(".delete-button").addEventListener("click", event => {

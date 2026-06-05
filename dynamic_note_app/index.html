@@ -217,6 +217,10 @@
       if (!noteId) return;
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
+          if (rec.payload.note_type === "optical") {
+            location.replace("../optical_dynamic_note_app/index.html?note_id=" + encodeURIComponent(noteId));
+            return;
+          }
           setEditor(rec.payload);
         } else {
           const n = state.notes.find(x => x.note_id === noteId);
@@ -229,6 +233,10 @@
       if (!noteId) return;
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
+          if (rec.payload.note_type === "optical") {
+            location.replace("../optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(noteId));
+            return;
+          }
           setEditor(asDuplicate(rec.payload));
           msg("複製元を読み込みました。日付と条件を確認して Save to Sheets してください。");
         } else {

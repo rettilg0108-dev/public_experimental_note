@@ -293,6 +293,7 @@
         const values=[...document.querySelector(`select[data-preset="${key}"]`)?.options||[]].map(o=>o.value).filter(Boolean);
         current[key]=[...new Set(values)];
       }
+      current.lot = [...new Set([...(current.lot || []), ...readLots().map(row => row.lot).filter(Boolean)])];
       return current;
     }
     function setEditor(data){
@@ -331,7 +332,7 @@
     q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
     q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, note_type:"optical", archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
     q("#addSummary").onclick=()=>{ const rows=readSummaries(); rows.push(summaryBlank()); renderSummaries(rows); };
-    q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}); renderLots(rows); };
+    q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}); renderLots(rows); renderOptions(readPresets()); };
     q("#addEvent").onclick=()=>{ const rows=readEvents(); rows.push(eventBlank()); renderEvents(rows); };
     q("#duplicateEvent").onclick=()=>{ const rows=readEvents(); rows.push({...rows.at(-1), title:(rows.at(-1)?.title || "event")+" copy"}); renderEvents(rows); };
     q("#addPreset").onclick=()=>{ const value=q("#presetValue").value.trim(), target=q("#presetTarget").value; if(!value) return; document.querySelectorAll(`select[data-preset="${target}"]`).forEach(s=>{ if(![...s.options].some(o=>o.value===value)) s.add(new Option(value,value)); s.value=value; }); q("#presetValue").value=""; };
@@ -342,7 +343,11 @@
       if(e.target.closest(".delete-inst-row")) e.target.closest("tr").remove();
       if(e.target.closest(".add-instrument-row")) { const card=e.target.closest(".event-card"); const rows=readEvents()[[...q("#eventList").querySelectorAll(".event-card")].indexOf(card)].instrumentRows; rows.push({mode:"",range:"",excitation:"",emission:"",slit:"",gain:"",scan:""}); renderInstrumentRows(card, rows); }
     });
-    document.addEventListener("input", e=>{ if(e.target.matches("textarea")) autosizeAll(); if(e.target.matches("#displayName,#compoundId,#project")) { q("#pageTitle").textContent=noteTitle(); } });
+    document.addEventListener("input", e=>{
+      if(e.target.matches("textarea")) autosizeAll();
+      if(e.target.matches("#displayName,#compoundId,#project")) q("#pageTitle").textContent=noteTitle();
+      if(e.target.matches('[data-lot="lot"]')) renderOptions(readPresets());
+    });
     q("#structureFile").addEventListener("change", event => {
       const file = event.target.files?.[0];
       if (!file || !file.type.startsWith("image/")) return;
