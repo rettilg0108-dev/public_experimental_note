@@ -261,6 +261,7 @@
       <input id="search" type="search" placeholder="Search by date, title, reagent, tag..." aria-label="Search notes">
       <button type="button" id="load-sheet-status">Sheets再読込</button>
       <a class="open-note new-note-button" href="dynamic_note_app/index.html">新規 合成実験ノート</a>
+      <a class="open-note new-note-button" href="optical_dynamic_note_app/index.html">新規 光学分析ノート</a>
       <a class="open-note new-note-button" href="optical_note_templates/index.html">光学分析テンプレ案</a>
     </div>
     <details class="section">
@@ -506,7 +507,8 @@
 
     function createDynamicNote(row) {
       if (!row.note_id || loadDeletedNoteIds().has(row.note_id) || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
-      const href = "dynamic_note_app/index.html?note_id=" + encodeURIComponent(row.note_id);
+      const appPath = row.note_type === "optical" ? "optical_dynamic_note_app/index.html" : "dynamic_note_app/index.html";
+      const href = appPath + "?note_id=" + encodeURIComponent(row.note_id);
       const note = document.createElement("article");
       note.className = "note";
       note.dataset.href = href;
@@ -557,7 +559,8 @@
       note.querySelector(".duplicate-button").addEventListener("click", event => {
         event.stopPropagation();
         showToast("複製元を読み込みます");
-        location.href = "dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
+        const duplicateAppPath = row.note_type === "optical" ? "optical_dynamic_note_app/index.html" : "dynamic_note_app/index.html";
+        location.href = duplicateAppPath + "?duplicate_from=" + encodeURIComponent(row.note_id);
       });
       note.querySelector(".delete-button").addEventListener("click", event => {
         event.stopPropagation();
@@ -681,6 +684,7 @@
           product: row.product || "",
           keywords: row.keywords || "",
           status: row.status || "ongoing",
+          note_type: row.note_type || "synthesis",
           archived,
           updated_at: new Date().toISOString()
         })

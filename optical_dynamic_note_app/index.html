@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>Optical Analysis Note</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --soft:#eaf3f7; --danger:#8a2430; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; line-height:1.55; }
+    .wrap { width:min(1120px, calc(100% - 28px)); margin:24px auto; display:grid; gap:14px; }
+    header,.panel,.card { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header { border-top:5px solid var(--accent); padding:22px 24px; }
+    h1 { margin:0 0 6px; font-size:25px; }
+    h2 { margin:0 0 10px; font-size:18px; }
+    h3 { margin:0 0 8px; font-size:15px; }
+    .muted,.msg { color:var(--muted); font-size:13px; }
+    .msg { min-height:20px; }
+    .panel { padding:16px; display:grid; gap:14px; }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .wide { grid-column:1 / -1; }
+    label { display:grid; gap:4px; color:var(--muted); font-size:13px; }
+    input,textarea,select,button { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; font:inherit; background:#fff; }
+    textarea { min-height:86px; resize:none; overflow:hidden; }
+    button { width:auto; color:var(--accent); font-weight:750; cursor:pointer; }
+    button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    button.danger { color:var(--danger); border-color:#e2b9c0; background:#fff8f9; }
+    button:disabled { opacity:.62; cursor:wait; }
+    a { color:var(--accent); font-weight:750; text-decoration:none; }
+    .row,.actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .actions { justify-content:flex-end; }
+    .card-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .card { padding:12px; display:grid; gap:8px; }
+    .card-title input { color:var(--accent); font-weight:800; }
+    .preset-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:end; padding:10px; border:1px solid var(--line); border-radius:8px; background:#f6f8fa; }
+    .preset-bar label { min-width:150px; flex:1 1 150px; }
+    .event-list { display:grid; gap:10px; }
+    .event-card { border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
+    .event-head { display:grid; grid-template-columns:120px 1.6fr 1fr 1fr auto; gap:8px; align-items:end; padding:10px 12px; background:#f6f8fa; border-bottom:1px solid var(--line); }
+    .event-body { padding:12px; display:grid; gap:12px; }
+    .mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
+    th { background:#f6f8fa; color:var(--muted); font-size:12px; text-align:left; }
+    td input,td select,td textarea { border:0; padding:4px; min-width:80px; }
+    .table-scroll { overflow:auto; }
+    @media (max-width:820px) {
+      .wrap { width:100%; margin:0; }
+      header,.panel { border-left:0; border-right:0; border-radius:0; }
+      .grid,.card-grid,.mini-grid,.event-head { grid-template-columns:1fr; }
+      .row button,.row a { flex:1 1 auto; text-align:center; }
+      table { min-width:780px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="pageTitle">Optical Analysis Note</h1>
+      <p class="muted" id="pageLead">Google Sheetsに保存する光学分析ノート。</p>
+      <div class="row"><a href="../index.html">Top page</a></div>
+      <div class="msg" id="msg"></div>
+    </header>
+
+    <main class="panel">
+      <h2>化合物プロファイル</h2>
+      <div class="grid">
+        <label>作成日<input id="date" type="date"></label>
+        <label class="wide">project<input id="project" value="IR dye optical profiling / enzyme-responsive NIR dyes"></label>
+        <label>compound ID<input id="compoundId" placeholder="m900 / IR1061-thiol"></label>
+        <label>display name<input id="displayName" placeholder="Thiol sulfonate IR1061"></label>
+        <label>M.W.<input id="mw" placeholder="781.07"></label>
+        <label>storage<input id="storage" placeholder="-20 ℃, dark"></label>
+        <label>source note<input id="sourceNote" placeholder="Synthesis note title or URL"></label>
+        <label>Keywords<input id="keywords" placeholder="abs, FL, PA, cyanine"></label>
+      </div>
+
+      <section>
+        <h3>条件別の代表値</h3>
+        <div class="preset-bar">
+          <button type="button" id="addSummary">代表値カードを追加</button>
+          <span class="muted">溶媒、濃度、添加条件ごとに増やす。</span>
+        </div>
+        <div class="card-grid" id="summaryGrid"></div>
+      </section>
+
+      <section>
+        <h3>よく使う条件候補</h3>
+        <div class="grid">
+          <label>lot<select data-preset="lot"></select></label>
+          <label>solvent<select data-preset="solvent"></select></label>
+          <label>cuvette<select data-preset="cuvette"></select></label>
+          <label>temperature<select data-preset="temperature"></select></label>
+          <label>degas<select data-preset="degas"></select></label>
+        </div>
+        <div class="preset-bar">
+          <label>候補を追加<input id="presetValue" placeholder="例: serum 10%, 37 ℃"></label>
+          <label>追加先<select id="presetTarget"><option value="lot">lot</option><option value="solvent">solvent</option><option value="cuvette">cuvette</option><option value="temperature">temperature</option><option value="degas">degas</option></select></label>
+          <button type="button" id="addPreset">候補に追加</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>lot / stock</h3>
+        <div class="table-scroll">
+          <table id="lotTable">
+            <thead><tr><th>lot</th><th>source</th><th>prepared</th><th>stock</th><th>solvent</th><th>state</th><th>storage</th><th>note</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="actions"><button type="button" id="addLot">lot行を追加</button></div>
+      </section>
+
+      <section>
+        <h3>measurement events</h3>
+        <div class="preset-bar">
+          <label>測定テンプレ<select id="eventTemplate"><option>Abs + FL standard</option><option>Abs only</option><option>FL excitation</option><option>PA standard</option><option>enzyme/addition response</option></select></label>
+          <button type="button" id="duplicateEvent">最後のeventを複製</button>
+          <button type="button" id="addEvent">新規event</button>
+        </div>
+        <div class="event-list" id="eventList"></div>
+      </section>
+
+      <label>メモ<textarea id="memo" placeholder="この化合物としての結論、怪しい測定、次に確認すべきこと"></textarea></label>
+
+      <div class="row">
+        <button class="primary" id="saveNote" type="button">Save to Sheets</button>
+        <button id="archiveNote" type="button">アーカイブ</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const q = s => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    const requestedNoteId = params.get("note_id");
+    const duplicateFromId = params.get("duplicate_from");
+    const state = { currentId:"" };
+    const presetDefaults = {
+      lot:["IR1061-thiol-20260602-A","IR1061-thiol-20260605-B"],
+      solvent:["PBS/DMSO 1%","water","DMSO","PBS pH 7.4"],
+      cuvette:["quartz 1 cm","micro cuvette","plate"],
+      temperature:["25 ℃","37 ℃","rt"],
+      degas:["none","Ar bubbling","N2 bubbling","freeze-pump-thaw"]
+    };
+    let msgTimer = null;
+    function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
+    function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
+    function today(){ return new Date().toLocaleDateString("sv-SE"); }
+    function slug(value){ return String(value||"optical-note").trim().toLowerCase().replace(/[^a-z0-9一-龯ぁ-んァ-ンー]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) || "optical-note"; }
+    function noteTitle(){ return "Optical analysis: " + (q("#displayName").value || q("#compoundId").value || "compound"); }
+    function noteId(){ return [q("#date").value || today(), "optical", slug(q("#displayName").value || q("#compoundId").value)].join("-") + "-" + Math.random().toString(36).slice(2,5); }
+    function blankNote(){
+      return {
+        note_type:"optical", note_id:"", date:today(), project:"", compoundId:"", displayName:"", mw:"", storage:"", sourceNote:"", keywords:"optical, analysis",
+        presets:structuredClone(presetDefaults),
+        summaries:[summaryBlank("PBS, 5 uM, 25 ℃"), summaryBlank("water, 5 uM, 25 ℃")],
+        lots:[{lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}],
+        events:[eventBlank()],
+        memo:""
+      };
+    }
+    function summaryBlank(condition="new condition"){ return {condition, lambda_abs_max:"", lambda_em_max:"", phi_fl:"", pa:"", pa_abs:"", confidence:"tentative", source:""}; }
+    function eventBlank(){ return {date:today(), title:"new measurement", mode:"Abs, FL", condition:"PBS/DMSO 1%, 5 uM", lot:"", solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:"Abs + FL standard", instrumentRows:[{mode:"Abs",range:"350-950 nm",excitation:"-",emission:"-",slit:"1 nm",gain:"-",scan:"medium"},{mode:"FL emission",range:"-",excitation:"730 nm",emission:"760-1000 nm",slit:"5/5 nm",gain:"auto",scan:"medium"}], notes:"観察:\\nlambda max:\\nfluorescence:\\n沈殿/濁り:\\n次:", raw:""}; }
+    function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
+    function jsonp(params, cb){
+      const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
+      const name="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      const script=document.createElement("script");
+      window[name]=data=>{ cb(data); script.remove(); delete window[name]; };
+      script.src=url+"?"+new URLSearchParams({...params,callback:name}).toString();
+      script.onerror=()=>{ msg("Sheets読込失敗"); delete window[name]; };
+      document.body.append(script);
+    }
+    function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
+    function renderOptions(presets){
+      for(const [key, values] of Object.entries(presets || presetDefaults)){
+        document.querySelectorAll(`select[data-preset="${key}"]`).forEach(select=>{
+          const current=select.value;
+          select.innerHTML=(values||[]).map(v=>`<option>${escapeAttr(v)}</option>`).join("");
+          if(current && [...select.options].some(o=>o.value===current)) select.value=current;
+        });
+      }
+    }
+    function renderSummaries(rows){
+      q("#summaryGrid").innerHTML=(rows||[]).map(r=>`<article class="card summary-card">
+        <label class="card-title">condition<input data-sum="condition" value="${escapeAttr(r.condition)}"></label>
+        <label>lambda_abs_max<input data-sum="lambda_abs_max" value="${escapeAttr(r.lambda_abs_max)}"></label>
+        <label>lambda_em_max<input data-sum="lambda_em_max" value="${escapeAttr(r.lambda_em_max)}"></label>
+        <label>Phi_fl<input data-sum="phi_fl" value="${escapeAttr(r.phi_fl)}"></label>
+        <label>PA<input data-sum="pa" value="${escapeAttr(r.pa)}"></label>
+        <label>PA / Abs<input data-sum="pa_abs" value="${escapeAttr(r.pa_abs)}"></label>
+        <label>confidence<select data-sum="confidence"><option ${r.confidence==="tentative"?"selected":""}>tentative</option><option ${r.confidence==="confirmed"?"selected":""}>confirmed</option><option ${r.confidence==="low"?"selected":""}>low</option></select></label>
+        <label>source event<input data-sum="source" value="${escapeAttr(r.source)}"></label>
+        <div class="actions"><button type="button" class="delete-summary danger">削除</button></div>
+      </article>`).join("");
+    }
+    function readSummaries(){ return [...q("#summaryGrid").querySelectorAll(".summary-card")].map(card=>Object.fromEntries([...card.querySelectorAll("[data-sum]")].map(el=>[el.dataset.sum,el.value]))); }
+    function renderLots(rows){
+      q("#lotTable tbody").innerHTML=(rows||[]).map(r=>`<tr>
+        ${["lot","source","prepared","stock","solvent","state","storage","note"].map(k=>`<td><input data-lot="${k}" value="${escapeAttr(r[k])}"></td>`).join("")}
+        <td><button type="button" class="delete-row danger">削除</button></td>
+      </tr>`).join("");
+    }
+    function readLots(){ return [...q("#lotTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-lot]")].map(el=>[el.dataset.lot,el.value]))); }
+    function renderEvents(rows){
+      q("#eventList").innerHTML=(rows||[]).map(r=>`<article class="event-card">
+        <div class="event-head">
+          <label>date<input data-event="date" type="date" value="${escapeAttr(r.date)}"></label>
+          <label>sheet title / purpose<input data-event="title" value="${escapeAttr(r.title)}"></label>
+          <label>measurement<input data-event="mode" value="${escapeAttr(r.mode)}"></label>
+          <label>condition<input data-event="condition" value="${escapeAttr(r.condition)}"></label>
+          <button type="button" class="delete-event danger">削除</button>
+        </div>
+        <div class="event-body">
+          <div class="mini-grid">
+            <label>lot<select data-event="lot" data-preset="lot"></select></label>
+            <label>solvent / buffer<select data-event="solvent" data-preset="solvent"></select></label>
+            <label>final concentration<input data-event="concentration" value="${escapeAttr(r.concentration)}"></label>
+            <label>cuvette<select data-event="cuvette" data-preset="cuvette"></select></label>
+            <label>temperature<select data-event="temperature" data-preset="temperature"></select></label>
+            <label>enzyme<input data-event="enzyme" value="${escapeAttr(r.enzyme)}"></label>
+            <label>reaction molecule/additive<input data-event="additive" value="${escapeAttr(r.additive)}"></label>
+            <label>degas<select data-event="degas" data-preset="degas"></select></label>
+          </div>
+          <details>
+            <summary>装置条件テンプレ</summary>
+            <label>template<input data-event="instrumentTemplate" value="${escapeAttr(r.instrumentTemplate)}"></label>
+            <div class="table-scroll"><table><thead><tr><th>mode</th><th>range</th><th>excitation</th><th>emission</th><th>slit/bandwidth</th><th>gain</th><th>scan speed</th><th></th></tr></thead><tbody class="instrument-body"></tbody></table></div>
+            <div class="actions"><button type="button" class="add-instrument-row">装置条件行を追加</button></div>
+          </details>
+          <label>観察・メモ<textarea data-event="notes">${escapeAttr(r.notes)}</textarea></label>
+          <label>raw data / figure link<textarea data-event="raw">${escapeAttr(r.raw)}</textarea></label>
+        </div>
+      </article>`).join("");
+      [...q("#eventList").querySelectorAll(".event-card")].forEach((card,i)=>{
+        renderOptions(collect().presets);
+        ["lot","solvent","cuvette","temperature","degas"].forEach(k=>{ const el=card.querySelector(`[data-event="${k}"]`); if(el && rows[i]?.[k]) el.value=rows[i][k]; });
+        renderInstrumentRows(card, rows[i]?.instrumentRows || []);
+      });
+      autosizeAll();
+    }
+    function renderInstrumentRows(card, rows){
+      card.querySelector(".instrument-body").innerHTML=(rows||[]).map(r=>`<tr>
+        ${["mode","range","excitation","emission","slit","gain","scan"].map(k=>`<td><input data-inst="${k}" value="${escapeAttr(r[k])}"></td>`).join("")}
+        <td><button type="button" class="delete-inst-row danger">削除</button></td>
+      </tr>`).join("");
+    }
+    function readEvents(){
+      return [...q("#eventList").querySelectorAll(".event-card")].map(card=>{
+        const base=Object.fromEntries([...card.querySelectorAll("[data-event]")].map(el=>[el.dataset.event,el.value]));
+        base.instrumentRows=[...card.querySelectorAll(".instrument-body tr")].map(row=>Object.fromEntries([...row.querySelectorAll("[data-inst]")].map(el=>[el.dataset.inst,el.value])));
+        return base;
+      });
+    }
+    function collect(){
+      const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), events:readEvents(), memo:q("#memo").value};
+      data.title=noteTitle();
+      data.subtitle=[data.project,data.compoundId].filter(Boolean).join(" / ");
+      data.method="Optical analysis";
+      data.product=data.displayName || data.compoundId;
+      data.status="ongoing";
+      return data;
+    }
+    function readPresets(){
+      const current={};
+      for(const key of Object.keys(presetDefaults)){
+        const values=[...document.querySelector(`select[data-preset="${key}"]`)?.options||[]].map(o=>o.value).filter(Boolean);
+        current[key]=[...new Set(values)];
+      }
+      return current;
+    }
+    function setEditor(data){
+      state.currentId=data.note_id || "";
+      const note={...blankNote(), ...data, presets:{...presetDefaults, ...(data.presets||{})}};
+      ["date","project","compoundId","displayName","mw","storage","sourceNote","keywords","memo"].forEach(k=>q("#"+k).value=note[k]||"");
+      document.title=note.title || noteTitle();
+      q("#pageTitle").textContent=note.title || noteTitle();
+      q("#pageLead").textContent=note.subtitle || "Google Sheetsに保存する光学分析ノート。";
+      renderOptions(note.presets);
+      renderSummaries(note.summaries);
+      renderLots(note.lots);
+      renderEvents(note.events);
+      autosizeAll();
+    }
+    function asDuplicate(data){ return {...data, note_id:"", date:today(), status:"ongoing"}; }
+    function loadNoteById(id, duplicate=false){
+      jsonp({kind:"edit", note_id:id}, rec=>{
+        if(rec?.payload) { setEditor(duplicate ? asDuplicate(rec.payload) : rec.payload); msg(duplicate ? "複製元を読み込みました" : "読み込みました"); }
+        else msg("指定ノートが見つかりません");
+      });
+    }
+    async function saveCurrent(){
+      const button=q("#saveNote"), old=button.textContent;
+      button.disabled=true; button.textContent="Saving..."; msg("Sheetsへ保存リクエストを送信中...");
+      const data=collect(); state.currentId=data.note_id;
+      try{
+        await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:"optical", archived:false, updated_at:new Date().toISOString()});
+        await post({kind:"edit", note_id:data.note_id, note_type:"optical", payload:data, updated_at:new Date().toISOString()});
+        msg("保存リクエストを送りました。Top pageでSheets再読込すると表示されます。");
+      } finally { button.disabled=false; button.textContent=old; }
+    }
+    function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
+    q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
+    q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, note_type:"optical", archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
+    q("#addSummary").onclick=()=>{ const rows=readSummaries(); rows.push(summaryBlank()); renderSummaries(rows); };
+    q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}); renderLots(rows); };
+    q("#addEvent").onclick=()=>{ const rows=readEvents(); rows.push(eventBlank()); renderEvents(rows); };
+    q("#duplicateEvent").onclick=()=>{ const rows=readEvents(); rows.push({...rows.at(-1), title:(rows.at(-1)?.title || "event")+" copy"}); renderEvents(rows); };
+    q("#addPreset").onclick=()=>{ const value=q("#presetValue").value.trim(), target=q("#presetTarget").value; if(!value) return; document.querySelectorAll(`select[data-preset="${target}"]`).forEach(s=>{ if(![...s.options].some(o=>o.value===value)) s.add(new Option(value,value)); s.value=value; }); q("#presetValue").value=""; };
+    document.addEventListener("click", e=>{
+      if(e.target.closest(".delete-summary")) e.target.closest(".summary-card").remove();
+      if(e.target.closest(".delete-row")) e.target.closest("tr").remove();
+      if(e.target.closest(".delete-event") && confirm("この測定シートを削除しますか？")) e.target.closest(".event-card").remove();
+      if(e.target.closest(".delete-inst-row")) e.target.closest("tr").remove();
+      if(e.target.closest(".add-instrument-row")) { const card=e.target.closest(".event-card"); const rows=readEvents()[[...q("#eventList").querySelectorAll(".event-card")].indexOf(card)].instrumentRows; rows.push({mode:"",range:"",excitation:"",emission:"",slit:"",gain:"",scan:""}); renderInstrumentRows(card, rows); }
+    });
+    document.addEventListener("input", e=>{ if(e.target.matches("textarea")) autosizeAll(); if(e.target.matches("#displayName,#compoundId,#project")) { q("#pageTitle").textContent=noteTitle(); } });
+    setEditor(blankNote());
+    if(requestedNoteId) loadNoteById(requestedNoteId);
+    else if(duplicateFromId) loadNoteById(duplicateFromId, true);
+    else if(!endpoint()) msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
+  </script>
+</body>
+</html>
