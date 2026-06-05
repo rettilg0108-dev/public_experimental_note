@@ -101,26 +101,10 @@
       </section>
 
       <section>
-        <h3>よく使う条件候補</h3>
-        <div class="grid">
-          <label>lot<select data-preset="lot"></select></label>
-          <label>solvent<select data-preset="solvent"></select></label>
-          <label>cuvette<select data-preset="cuvette"></select></label>
-          <label>temperature<select data-preset="temperature"></select></label>
-          <label>degas<select data-preset="degas"></select></label>
-        </div>
-        <div class="preset-bar">
-          <label>候補を追加<input id="presetValue" placeholder="例: serum 10%, 37 ℃"></label>
-          <label>追加先<select id="presetTarget"><option value="lot">lot</option><option value="solvent">solvent</option><option value="cuvette">cuvette</option><option value="temperature">temperature</option><option value="degas">degas</option></select></label>
-          <button type="button" id="addPreset">候補に追加</button>
-        </div>
-      </section>
-
-      <section>
         <h3>lot / stock</h3>
         <div class="table-scroll">
           <table id="lotTable">
-            <thead><tr><th>lot</th><th>source</th><th>prepared</th><th>stock</th><th>solvent</th><th>state</th><th>storage</th><th>note</th><th></th></tr></thead>
+            <thead><tr><th>lot</th><th>date</th><th>state</th><th>storage</th><th>note</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -130,9 +114,11 @@
       <section>
         <h3>measurement events</h3>
         <div class="preset-bar">
-          <label>測定テンプレ<select id="eventTemplate"><option>Abs + FL standard</option><option>Abs only</option><option>FL excitation</option><option>PA standard</option><option>Lifetime</option><option>enzyme/addition response</option></select></label>
+          <label>測定テンプレ<select id="eventTemplate"></select></label>
           <button type="button" id="duplicateEvent">最後のeventを複製</button>
           <button type="button" id="addEvent">新規event</button>
+          <button type="button" id="saveEventTemplate">最後のeventをテンプレ保存</button>
+          <button type="button" id="deleteEventTemplate" class="danger">選択テンプレを削除</button>
         </div>
         <div class="event-list" id="eventList"></div>
       </section>
@@ -148,6 +134,7 @@
 
   <script>
     const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const EVENT_TEMPLATES_KEY = "optical-note-event-templates:v1";
     const q = s => document.querySelector(s);
     const params = new URLSearchParams(location.search);
     const requestedNoteId = params.get("note_id");
@@ -167,13 +154,13 @@
       pa: { label:"PA", fields:[["instrument","Instrument"],["place","Place"],["range","Range"],["interval","Interval"]] },
       lifetime: { label:"Lifetime", fields:[["instrument","Instrument"],["place","Place"],["lambda_ex","λex"],["em_range","Em range"],["counts","Counts"],["ex_repeat","Ex repeat"]] }
     };
-    const eventTemplates = {
-      "Abs + FL standard": ["abs","fl"],
-      "Abs only": ["abs"],
-      "FL excitation": ["ex"],
-      "PA standard": ["pa"],
-      "Lifetime": ["lifetime"],
-      "enzyme/addition response": ["abs","fl"]
+    const builtInEventTemplates = {
+      "Abs + FL standard": {builtin:true, techniques:["abs","fl"]},
+      "Abs only": {builtin:true, techniques:["abs"]},
+      "FL excitation": {builtin:true, techniques:["ex"]},
+      "PA standard": {builtin:true, techniques:["pa"]},
+      "Lifetime": {builtin:true, techniques:["lifetime"]},
+      "enzyme/addition response": {builtin:true, techniques:["abs","fl"], enzyme:"", additive:""}
     };
     let msgTimer = null;
     function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
@@ -187,15 +174,28 @@
         note_type:"optical", note_id:"", date:today(), project:"", compoundId:"", displayName:"", mw:"", storage:"", sourceNote:"", keywords:"optical, analysis", structureImage:"", links:"",
         presets:structuredClone(presetDefaults),
         summaries:[summaryBlank("PBS, 5 uM, 25 ℃"), summaryBlank("water, 5 uM, 25 ℃")],
-        lots:[{lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}],
+        lots:[{lot:"",date:"",state:"",storage:"",note:""}],
         events:[eventBlank()],
         memo:""
       };
     }
     function summaryBlank(condition="new condition"){ return {condition, lambda_abs_max:"", lambda_em_max:"", phi_fl:"", pa:"", pa_abs:"", confidence:"tentative", source:""}; }
     function eventBlank(template=q("#eventTemplate")?.value || "Abs + FL standard"){
-      const techniques = eventTemplates[template] || eventTemplates["Abs + FL standard"];
-      return {date:today(), title:"new measurement", mode:techniques.map(t=>measurementSpecs[t].label).join(", "), lot:preferredLot(), solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:template, instrumentRows:techniques.map(blockBlank), notes:"", raw:""};
+      const source = allEventTemplates()[template] || builtInEventTemplates["Abs + FL standard"];
+      const rows = source.instrumentRows ? source.instrumentRows.map(normalizeBlock) : (source.techniques || ["abs","fl"]).map(blockBlank);
+      return {date:today(), title:"new measurement", mode:source.mode || rows.map(t=>measurementSpecs[t.technique].label).join(", "), lot:preferredLot(), solvent:source.solvent || "PBS/DMSO 1%", concentration:source.concentration || "5 uM", cuvette:source.cuvette || "quartz 1 cm", temperature:source.temperature || "25 ℃", enzyme:source.enzyme ?? "-", additive:source.additive ?? "-", degas:source.degas || "none", instrumentTemplate:template, instrumentRows:rows, notes:"", raw:""};
+    }
+    function loadCustomEventTemplates(){
+      try { return JSON.parse(localStorage.getItem(EVENT_TEMPLATES_KEY) || "{}") || {}; }
+      catch { return {}; }
+    }
+    function saveCustomEventTemplates(templates){ localStorage.setItem(EVENT_TEMPLATES_KEY, JSON.stringify(templates)); }
+    function allEventTemplates(){ return {...builtInEventTemplates, ...loadCustomEventTemplates()}; }
+    function renderEventTemplateOptions(){
+      const select = q("#eventTemplate");
+      const current = select.value || "Abs + FL standard";
+      select.innerHTML = Object.keys(allEventTemplates()).map(name=>`<option value="${escapeAttr(name)}">${escapeText(name)}</option>`).join("");
+      select.value = Object.prototype.hasOwnProperty.call(allEventTemplates(), current) ? current : "Abs + FL standard";
     }
     function blockBlank(type="abs"){
       const block = {technique:type};
@@ -266,7 +266,7 @@
     function readSummaries(){ return [...q("#summaryGrid").querySelectorAll(".summary-card")].map(card=>Object.fromEntries([...card.querySelectorAll("[data-sum]")].map(el=>[el.dataset.sum,el.value]))); }
     function renderLots(rows){
       q("#lotTable tbody").innerHTML=(rows||[]).map(r=>`<tr>
-        ${["lot","source","prepared","stock","solvent","state","storage","note"].map(k=>`<td><input data-lot="${k}" value="${escapeAttr(r[k])}"></td>`).join("")}
+        ${["lot","date","state","storage","note"].map(k=>`<td><input data-lot="${k}" value="${escapeAttr(r[k] || (k==="date" ? r.prepared : ""))}"></td>`).join("")}
         <td><button type="button" class="delete-row danger">削除</button></td>
       </tr>`).join("");
     }
@@ -280,6 +280,7 @@
           <button type="button" class="delete-event danger">削除</button>
         </div>
         <div class="event-body">
+          <input type="hidden" data-event="instrumentTemplate" value="${escapeAttr(r.instrumentTemplate)}">
           <div class="mini-grid">
             <label>lot<select data-event="lot" data-preset="lot"></select></label>
             <label>solvent / buffer<select data-event="solvent" data-preset="solvent"></select></label>
@@ -292,7 +293,6 @@
           </div>
           <details open>
             <summary>装置条件</summary>
-            <label>template<input data-event="instrumentTemplate" value="${escapeAttr(r.instrumentTemplate)}"></label>
             <div class="measurement-tools">
               ${Object.entries(measurementSpecs).map(([type, spec])=>`<button type="button" class="add-measurement" data-add-measurement="${type}">${spec.label}を追加</button>`).join("")}
             </div>
@@ -344,11 +344,20 @@
     function collect(){
       const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, structureImage:q("#structurePreview").hidden ? "" : q("#structurePreview").src, links:q("#links").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), events:readEvents(), memo:q("#memo").value};
       data.title=noteTitle();
-      data.subtitle=[data.project,data.compoundId].filter(Boolean).join(" / ");
+      const range = measurementDateRange(data.events);
+      data.measurementStart = range.start;
+      data.measurementEnd = range.end;
+      data.subtitle=[data.project,data.compoundId,range.label].filter(Boolean).join(" / ");
       data.method="Optical analysis";
       data.product=data.displayName || data.compoundId;
       data.status="ongoing";
       return data;
+    }
+    function measurementDateRange(events){
+      const dates = (events || []).map(event => event.date).filter(Boolean).sort();
+      if (!dates.length) return {start:"", end:"", label:""};
+      const start = dates[0], end = dates[dates.length - 1];
+      return {start, end, label:start === end ? `measured ${start}` : `measured ${start} - ${end}`};
     }
     function readPresets(){
       const current={};
@@ -393,7 +402,7 @@
         if (payloadLength > 45000) {
           throw new Error("保存データが大きすぎます。画像はリンク欄にURLで貼るか、構造画像を小さくしてください。");
         }
-        await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:"optical", archived:false, updated_at:new Date().toISOString()});
+        await post({kind:"note", note_id:data.note_id, date:data.measurementStart || data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:"optical", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"optical", payload:data, updated_at:new Date().toISOString()});
         history.replaceState(null, "", "?note_id=" + encodeURIComponent(data.note_id));
         msg("保存リクエストを送りました。このページは同じノートIDで更新されます。");
@@ -403,10 +412,42 @@
     q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
     q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, note_type:"optical", archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
     q("#addSummary").onclick=()=>{ const rows=readSummaries(); rows.push(summaryBlank()); renderSummaries(rows); };
-    q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}); renderLots(rows); renderOptions(readPresets()); };
+    q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",date:"",state:"",storage:"",note:""}); renderLots(rows); renderOptions(readPresets()); };
     q("#addEvent").onclick=()=>{ const rows=readEvents(); rows.push(eventBlank()); renderEvents(rows); };
     q("#duplicateEvent").onclick=()=>{ const rows=readEvents(); rows.push({...rows.at(-1), title:(rows.at(-1)?.title || "event")+" copy"}); renderEvents(rows); };
-    q("#addPreset").onclick=()=>{ const value=q("#presetValue").value.trim(), target=q("#presetTarget").value; if(!value) return; document.querySelectorAll(`select[data-preset="${target}"]`).forEach(s=>{ if(![...s.options].some(o=>o.value===value)) s.add(new Option(value,value)); s.value=value; }); q("#presetValue").value=""; };
+    q("#saveEventTemplate").onclick=()=>{
+      const event = readEvents().at(-1);
+      if(!event) return msg("保存するeventがありません。");
+      const name = prompt("テンプレ名", event.instrumentTemplate && !builtInEventTemplates[event.instrumentTemplate] ? event.instrumentTemplate : event.title || "custom measurement");
+      if(!name) return;
+      const templates = loadCustomEventTemplates();
+      templates[name.trim()] = {
+        builtin:false,
+        mode:event.mode || "",
+        solvent:event.solvent || "",
+        concentration:event.concentration || "",
+        cuvette:event.cuvette || "",
+        temperature:event.temperature || "",
+        enzyme:event.enzyme || "",
+        additive:event.additive || "",
+        degas:event.degas || "",
+        instrumentRows:(event.instrumentRows || []).map(normalizeBlock)
+      };
+      saveCustomEventTemplates(templates);
+      renderEventTemplateOptions();
+      q("#eventTemplate").value = name.trim();
+      msg("測定テンプレを保存しました。");
+    };
+    q("#deleteEventTemplate").onclick=()=>{
+      const name = q("#eventTemplate").value;
+      if(builtInEventTemplates[name]) return msg("標準テンプレは削除できません。");
+      if(!confirm(`測定テンプレ「${name}」を削除しますか？`)) return;
+      const templates = loadCustomEventTemplates();
+      delete templates[name];
+      saveCustomEventTemplates(templates);
+      renderEventTemplateOptions();
+      msg("測定テンプレを削除しました。");
+    };
     document.addEventListener("click", e=>{
       if(e.target.closest(".delete-summary")) e.target.closest(".summary-card").remove();
       if(e.target.closest(".delete-row")) e.target.closest("tr").remove();
@@ -463,6 +504,7 @@
         reader.readAsDataURL(file);
       });
     }
+    renderEventTemplateOptions();
     setEditor(blankNote());
     if(requestedNoteId) loadNoteById(requestedNoteId);
     else if(duplicateFromId) loadNoteById(duplicateFromId, true);
