@@ -40,6 +40,7 @@
     .event-head { display:grid; grid-template-columns:120px 1.6fr 1fr 1fr auto; gap:8px; align-items:end; padding:10px 12px; background:#f6f8fa; border-bottom:1px solid var(--line); }
     .event-body { padding:12px; display:grid; gap:12px; }
     .mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .structure-preview { width:100%; max-height:260px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; }
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
     th { background:#f6f8fa; color:var(--muted); font-size:12px; text-align:left; }
@@ -75,6 +76,15 @@
         <label>source note<input id="sourceNote" placeholder="Synthesis note title or URL"></label>
         <label>Keywords<input id="keywords" placeholder="abs, FL, PA, cyanine"></label>
       </div>
+
+      <section>
+        <h3>化合物構造 / links</h3>
+        <div class="grid">
+          <label class="wide">構造画像<input id="structureFile" type="file" accept="image/*"></label>
+          <label class="wide">関連リンク<textarea id="links" placeholder="合成ノート、raw data folder、Google Drive URLなど"></textarea></label>
+        </div>
+        <img class="structure-preview" id="structurePreview" alt="" hidden>
+      </section>
 
       <section>
         <h3>条件別の代表値</h3>
@@ -139,7 +149,7 @@
     const duplicateFromId = params.get("duplicate_from");
     const state = { currentId:"" };
     const presetDefaults = {
-      lot:["IR1061-thiol-20260602-A","IR1061-thiol-20260605-B"],
+      lot:[],
       solvent:["PBS/DMSO 1%","water","DMSO","PBS pH 7.4"],
       cuvette:["quartz 1 cm","micro cuvette","plate"],
       temperature:["25 ℃","37 ℃","rt"],
@@ -154,7 +164,7 @@
     function noteId(){ return [q("#date").value || today(), "optical", slug(q("#displayName").value || q("#compoundId").value)].join("-") + "-" + Math.random().toString(36).slice(2,5); }
     function blankNote(){
       return {
-        note_type:"optical", note_id:"", date:today(), project:"", compoundId:"", displayName:"", mw:"", storage:"", sourceNote:"", keywords:"optical, analysis",
+        note_type:"optical", note_id:"", date:today(), project:"", compoundId:"", displayName:"", mw:"", storage:"", sourceNote:"", keywords:"optical, analysis", structureImage:"", links:"",
         presets:structuredClone(presetDefaults),
         summaries:[summaryBlank("PBS, 5 uM, 25 ℃"), summaryBlank("water, 5 uM, 25 ℃")],
         lots:[{lot:"",source:"",prepared:"",stock:"",solvent:"",state:"",storage:"",note:""}],
@@ -163,7 +173,7 @@
       };
     }
     function summaryBlank(condition="new condition"){ return {condition, lambda_abs_max:"", lambda_em_max:"", phi_fl:"", pa:"", pa_abs:"", confidence:"tentative", source:""}; }
-    function eventBlank(){ return {date:today(), title:"new measurement", mode:"Abs, FL", condition:"PBS/DMSO 1%, 5 uM", lot:"", solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:"Abs + FL standard", instrumentRows:[{mode:"Abs",range:"350-950 nm",excitation:"-",emission:"-",slit:"1 nm",gain:"-",scan:"medium"},{mode:"FL emission",range:"-",excitation:"730 nm",emission:"760-1000 nm",slit:"5/5 nm",gain:"auto",scan:"medium"}], notes:"観察:\\nlambda max:\\nfluorescence:\\n沈殿/濁り:\\n次:", raw:""}; }
+    function eventBlank(){ return {date:today(), title:"new measurement", mode:"Abs, FL", condition:"PBS/DMSO 1%, 5 uM", lot:preferredLot(), solvent:"PBS/DMSO 1%", concentration:"5 uM", cuvette:"quartz 1 cm", temperature:"25 ℃", enzyme:"-", additive:"-", degas:"none", instrumentTemplate:"Abs + FL standard", instrumentRows:[{mode:"Abs",range:"350-950 nm",excitation:"-",emission:"-",slit:"1 nm",gain:"-",scan:"medium"},{mode:"FL emission",range:"-",excitation:"730 nm",emission:"760-1000 nm",slit:"5/5 nm",gain:"auto",scan:"medium"}], notes:"", raw:""}; }
     function post(body){ const url=endpoint(); if(!url) throw new Error("Apps Script URL未設定"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
     function jsonp(params, cb){
       const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
@@ -175,11 +185,19 @@
       document.body.append(script);
     }
     function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
+    function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+    function preferredLot(){
+      const lastEventLot = readEvents().at(-1)?.lot;
+      if (lastEventLot) return lastEventLot;
+      const firstLot = readLots().find(row => row.lot)?.lot;
+      return firstLot || "";
+    }
     function renderOptions(presets){
       for(const [key, values] of Object.entries(presets || presetDefaults)){
         document.querySelectorAll(`select[data-preset="${key}"]`).forEach(select=>{
           const current=select.value;
-          select.innerHTML=(values||[]).map(v=>`<option>${escapeAttr(v)}</option>`).join("");
+          const options = ["", ...(values||[])];
+          select.innerHTML=[...new Set(options)].map(v=>`<option value="${escapeAttr(v)}">${escapeAttr(v)}</option>`).join("");
           if(current && [...select.options].some(o=>o.value===current)) select.value=current;
         });
       }
@@ -231,13 +249,18 @@
             <div class="table-scroll"><table><thead><tr><th>mode</th><th>range</th><th>excitation</th><th>emission</th><th>slit/bandwidth</th><th>gain</th><th>scan speed</th><th></th></tr></thead><tbody class="instrument-body"></tbody></table></div>
             <div class="actions"><button type="button" class="add-instrument-row">装置条件行を追加</button></div>
           </details>
-          <label>観察・メモ<textarea data-event="notes">${escapeAttr(r.notes)}</textarea></label>
-          <label>raw data / figure link<textarea data-event="raw">${escapeAttr(r.raw)}</textarea></label>
+          <label>観察・メモ<textarea data-event="notes" placeholder="観察、lambda max、蛍光、沈殿/濁り、次にやること">${escapeText(r.notes)}</textarea></label>
+          <label>raw data / figure link<textarea data-event="raw" placeholder="raw data folder URL、画像リンク、ファイル名など">${escapeText(r.raw)}</textarea></label>
         </div>
       </article>`).join("");
+      renderOptions(readPresets());
       [...q("#eventList").querySelectorAll(".event-card")].forEach((card,i)=>{
-        renderOptions(collect().presets);
-        ["lot","solvent","cuvette","temperature","degas"].forEach(k=>{ const el=card.querySelector(`[data-event="${k}"]`); if(el && rows[i]?.[k]) el.value=rows[i][k]; });
+        ["lot","solvent","cuvette","temperature","degas"].forEach(k=>{
+          const el=card.querySelector(`[data-event="${k}"]`);
+          const value=rows[i]?.[k] || "";
+          if(el && value && ![...el.options].some(option => option.value === value)) el.add(new Option(value, value));
+          if(el) el.value=value;
+        });
         renderInstrumentRows(card, rows[i]?.instrumentRows || []);
       });
       autosizeAll();
@@ -256,7 +279,7 @@
       });
     }
     function collect(){
-      const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), events:readEvents(), memo:q("#memo").value};
+      const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, structureImage:q("#structurePreview").hidden ? "" : q("#structurePreview").src, links:q("#links").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), events:readEvents(), memo:q("#memo").value};
       data.title=noteTitle();
       data.subtitle=[data.project,data.compoundId].filter(Boolean).join(" / ");
       data.method="Optical analysis";
@@ -275,7 +298,9 @@
     function setEditor(data){
       state.currentId=data.note_id || "";
       const note={...blankNote(), ...data, presets:{...presetDefaults, ...(data.presets||{})}};
-      ["date","project","compoundId","displayName","mw","storage","sourceNote","keywords","memo"].forEach(k=>q("#"+k).value=note[k]||"");
+      ["date","project","compoundId","displayName","mw","storage","sourceNote","keywords","links","memo"].forEach(k=>q("#"+k).value=note[k]||"");
+      q("#structurePreview").hidden = !note.structureImage;
+      q("#structurePreview").src = note.structureImage || "";
       document.title=note.title || noteTitle();
       q("#pageTitle").textContent=note.title || noteTitle();
       q("#pageLead").textContent=note.subtitle || "Google Sheetsに保存する光学分析ノート。";
@@ -318,6 +343,16 @@
       if(e.target.closest(".add-instrument-row")) { const card=e.target.closest(".event-card"); const rows=readEvents()[[...q("#eventList").querySelectorAll(".event-card")].indexOf(card)].instrumentRows; rows.push({mode:"",range:"",excitation:"",emission:"",slit:"",gain:"",scan:""}); renderInstrumentRows(card, rows); }
     });
     document.addEventListener("input", e=>{ if(e.target.matches("textarea")) autosizeAll(); if(e.target.matches("#displayName,#compoundId,#project")) { q("#pageTitle").textContent=noteTitle(); } });
+    q("#structureFile").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        q("#structurePreview").src = reader.result;
+        q("#structurePreview").hidden = false;
+      };
+      reader.readAsDataURL(file);
+    });
     setEditor(blankNote());
     if(requestedNoteId) loadNoteById(requestedNoteId);
     else if(duplicateFromId) loadNoteById(duplicateFromId, true);
