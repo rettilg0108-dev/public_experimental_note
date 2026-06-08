@@ -22,12 +22,13 @@
     .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     label { display:grid; gap:5px; color:var(--muted); font-size:14px; font-weight:650; }
     input,textarea,select,button { width:100%; border:1px solid var(--line); border-radius:6px; padding:10px 11px; font:inherit; font-size:16px; line-height:1.4; background:#fff; color:var(--ink); }
-    textarea { min-height:92px; resize:vertical; }
+    textarea { min-height:92px; resize:none; overflow:hidden; }
     button { width:auto; color:var(--accent); font-weight:750; cursor:pointer; }
     button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
     button:disabled { opacity:.62; cursor:wait; }
     a { color:var(--accent); font-weight:750; text-decoration:none; }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .date-field { max-width:190px; }
     .layout { display:grid; grid-template-columns:1fr; gap:14px; }
     body.note-view #editorHeading { display:none; }
     .list { display:grid; gap:8px; }
@@ -44,7 +45,7 @@
     th { background:#f6f8fa; color:var(--muted); font-size:13px; text-align:left; }
     td input,td select { border:0; padding:6px; min-width:92px; }
     .num { text-align:right; font-variant-numeric:tabular-nums; }
-    .table-scroll { overflow:auto; }
+    .table-scroll { overflow:visible; }
     @media (max-width:800px) {
       .wrap { width:100%; margin:0; }
       header { border-left:0; border-right:0; border-radius:0; padding:22px 18px; }
@@ -52,10 +53,24 @@
       h1 { font-size:24px; }
       h2 { font-size:20px; }
       h3 { font-size:18px; }
+      .date-field { max-width:210px; }
       .layout,.grid { grid-template-columns:1fr; }
       .row button,.row a { flex:1 1 auto; min-height:44px; text-align:center; justify-content:center; }
       input,textarea,select,button { min-height:44px; }
       .drop { padding:18px 12px; }
+      .table-scroll table,
+      .table-scroll thead,
+      .table-scroll tbody,
+      .table-scroll tr,
+      .table-scroll th,
+      .table-scroll td { display:block; width:100%; }
+      .table-scroll thead { display:none; }
+      .table-scroll tr { border:1px solid var(--line); border-radius:8px; padding:10px; margin:10px 0; background:#fff; }
+      .table-scroll td { border:0; padding:7px 0; }
+      .table-scroll td::before { content:attr(data-label); display:block; margin-bottom:4px; color:var(--muted); font-size:13px; font-weight:700; }
+      .table-scroll td:last-child::before { content:""; display:none; }
+      td input,td select,td textarea { border:1px solid var(--line); border-radius:6px; padding:10px 11px; min-width:0; }
+      td textarea { min-height:110px; }
     }
   </style>
 </head>
@@ -72,7 +87,7 @@
       <main class="panel" id="editor">
         <h2 id="editorHeading">新規 合成実験ノート</h2>
         <div class="grid">
-          <label>日付<input id="date" type="date"></label>
+          <label class="date-field">日付<input id="date" type="date"></label>
           <label>反応方法<input id="method" placeholder="Buchwald-Hartwig coupling"></label>
           <label>目的生成物<input id="product" placeholder="m346"></label>
           <label>状態<select id="status"><option value="ongoing">進行中</option><option value="completed">終了</option><option value="hold">保留</option></select></label>
@@ -282,6 +297,7 @@
       renderOperations(data.operations || (data.procedure ? [{date:"", time:"", text:data.procedure}] : [{date:"", time:"", text:""}]));
       renderImages(data.images||[]);
       recalc();
+      autosizeAll();
     }
     function collect(){
       const title = titleFromFields();
@@ -290,23 +306,24 @@
     }
     function renderReagents(rows){
       q("#reagentTable tbody").innerHTML = rows.map((r,i)=>`<tr>
-        <td><input data-k="name" value="${escapeAttr(r.name||"")}"></td>
-        <td><input data-k="role" value="${escapeAttr(r.role||"")}"></td>
-        <td><input data-k="mw" type="number" step="0.01" value="${escapeAttr(r.mw||"")}"></td>
-        <td><input data-k="eq" type="number" step="0.001" value="${escapeAttr(r.eq||"")}"></td>
-        <td><select data-k="unit"><option value="eq" ${r.unit!=="mol%"?"selected":""}>eq</option><option value="mol%" ${r.unit==="mol%"?"selected":""}>mol%</option></select></td>
-        <td><input data-k="density" type="number" step="0.001" value="${escapeAttr(r.density||"")}"></td>
-        <td class="num mmol"></td><td class="num amount"></td><td><button type="button" data-del="${i}">削除</button></td>
+        <td data-label="名称"><input data-k="name" value="${escapeAttr(r.name||"")}"></td>
+        <td data-label="役割"><input data-k="role" value="${escapeAttr(r.role||"")}"></td>
+        <td data-label="MW"><input data-k="mw" type="number" step="0.01" value="${escapeAttr(r.mw||"")}"></td>
+        <td data-label="eq/mol%"><input data-k="eq" type="number" step="0.001" value="${escapeAttr(r.eq||"")}"></td>
+        <td data-label="単位"><select data-k="unit"><option value="eq" ${r.unit!=="mol%"?"selected":""}>eq</option><option value="mol%" ${r.unit==="mol%"?"selected":""}>mol%</option></select></td>
+        <td data-label="密度 g/mL"><input data-k="density" type="number" step="0.001" value="${escapeAttr(r.density||"")}"></td>
+        <td data-label="mmol" class="num mmol"></td><td data-label="秤量/容量" class="num amount"></td><td data-label=""><button type="button" data-del="${i}">削除</button></td>
       </tr>`).join("");
     }
     function readReagents(){ return [...q("#reagentTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el=>[el.dataset.k,el.value]))); }
     function renderOperations(rows){
       q("#operationTable tbody").innerHTML = rows.map((r,i)=>`<tr>
-        <td><input data-op="date" type="date" value="${escapeAttr(r.date||"")}"></td>
-        <td><input data-op="time" type="time" value="${escapeAttr(r.time||"")}"></td>
-        <td><textarea data-op="text" placeholder="操作内容">${escapeAttr(r.text||"")}</textarea></td>
-        <td><button type="button" data-op-del="${i}">削除</button></td>
+        <td data-label="日付"><input data-op="date" type="date" value="${escapeAttr(r.date||"")}"></td>
+        <td data-label="時刻"><input data-op="time" type="time" value="${escapeAttr(r.time||"")}"></td>
+        <td data-label="操作"><textarea data-op="text" placeholder="操作内容">${escapeAttr(r.text||"")}</textarea></td>
+        <td data-label=""><button type="button" data-op-del="${i}">削除</button></td>
       </tr>`).join("");
+      autosizeAll();
     }
     function readOperations(){ return [...q("#operationTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-op]")].map(el=>[el.dataset.op,el.value]))); }
     function recalc(){
@@ -366,6 +383,8 @@
       }
     };
     q("#reagentTable").oninput=recalc;
+    function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
+    document.addEventListener("input", e=>{ if(e.target.matches("textarea")) autosizeAll(); });
     q("#reagentTable").onclick=e=>{ const b=e.target.closest("[data-del]"); if(!b) return; b.closest("tr").remove(); recalc(); };
     q("#operationTable").onclick=e=>{ const b=e.target.closest("[data-op-del]"); if(!b) return; b.closest("tr").remove(); };
     q("#addReagent").onclick=()=>{ const rows=readReagents(); rows.push({name:"",role:"reagent",mw:"",eq:"1",unit:"eq",density:""}); renderReagents(rows); recalc(); };
