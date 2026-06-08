@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-  <title>Cell / Animal Experiment Note Drafts</title>
+  <title>Experimental Note Drafts</title>
   <style>
     :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --soft:#eaf3f7; --danger:#8a2430; }
     * { box-sizing:border-box; }
@@ -60,7 +60,7 @@
       h3 { font-size:18px; }
       .grid,.grid-3,.card-grid,.event-head { grid-template-columns:1fr; }
       .date-field { max-width:210px; }
-      .tabs { display:grid; grid-template-columns:1fr 1fr; }
+      .tabs { display:grid; grid-template-columns:1fr; }
       .tabs button,.row button,.row a,.actions button { width:100%; min-height:44px; justify-content:center; }
       input,textarea,select,button { min-height:44px; }
       .table-scroll table,.table-scroll thead,.table-scroll tbody,.table-scroll tr,.table-scroll th,.table-scroll td { display:block; width:100%; }
@@ -77,14 +77,15 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Cell / Animal Experiment Note Drafts</h1>
-      <p class="muted">細胞実験ノートと動物実験ノートのHTMLドラフト。まだSheets保存なしの項目検討用です。</p>
+      <h1>Experimental Note Drafts</h1>
+      <p class="muted">細胞実験、動物実験、光学分析ノートのHTMLドラフト。まだSheets保存なしの項目検討用です。</p>
       <div class="row"><a href="../index.html">入口</a></div>
     </header>
 
     <div class="tabs" role="tablist" aria-label="Draft type">
       <button type="button" class="primary" id="cellTab" aria-selected="true">細胞実験ノート</button>
       <button type="button" id="animalTab" aria-selected="false">動物実験ノート</button>
+      <button type="button" id="opticalTab" aria-selected="false">光学分析ノート v2</button>
     </div>
 
     <main class="panel" id="cellDraft">
@@ -293,26 +294,182 @@
         </div>
       </section>
     </main>
+
+    <main class="panel hidden" id="opticalDraft">
+      <h2>光学分析ノート v2</h2>
+      <section>
+        <h3>compound profile</h3>
+        <div class="grid">
+          <label class="date-field">作成日<input type="date" value="2026-06-08"></label>
+          <label class="wide">project<input value="IR dye optical profiling / enzyme-responsive NIR dyes"></label>
+          <label>compound ID<input value="m900"></label>
+          <label>display name<input value="Thiol sulfonate IR1061"></label>
+          <label>M.W.<input value="781.07"></label>
+          <label>source synthesis note<input placeholder="synthesis note URL / title"></label>
+          <label>structure image<input type="file" accept="image/*"></label>
+          <label>storage<input value="-20 C, dark"></label>
+        </div>
+      </section>
+
+      <section>
+        <h3>current interpretation</h3>
+        <div class="grid">
+          <label class="wide">current summary<textarea>水系での吸収・蛍光・PA応答を確認中。代表値はまだtentative。</textarea></label>
+          <label>confidence<select><option>tentative</option><option>confirmed</option><option>low confidence</option></select></label>
+          <label>main concern<input value="aggregation / solvent dependence / lot difference"></label>
+          <label>next action<input value="PBS, serum, enzyme addition conditionを比較"></label>
+        </div>
+      </section>
+
+      <section>
+        <h3>key optical values</h3>
+        <div class="card-grid">
+          <article class="card">
+            <div class="card-title">PBS / 5 uM / 25 C</div>
+            <label>lambda_abs_max<input value="780 nm"></label>
+            <label>lambda_em_max<input value="820 nm"></label>
+            <label>Phi_fl<input value="tentative"></label>
+            <label>PA / Abs<input value="high / tentative"></label>
+            <label>source event<input value="2026-06-08 Abs+FL"></label>
+          </article>
+          <article class="card">
+            <div class="card-title">water / 5 uM / 25 C</div>
+            <label>lambda_abs_max<input value="765 nm"></label>
+            <label>lambda_em_max<input value="810 nm"></label>
+            <label>Phi_fl<input value=""></label>
+            <label>PA / Abs<input value=""></label>
+            <label>source event<input value=""></label>
+          </article>
+          <article class="card">
+            <div class="card-title">enzyme added</div>
+            <label>lambda_abs_max<input value=""></label>
+            <label>lambda_em_max<input value=""></label>
+            <label>Phi_fl<input value=""></label>
+            <label>PA / Abs<input value=""></label>
+            <label>source event<input value=""></label>
+          </article>
+        </div>
+        <div class="actions"><button type="button">代表値カード追加</button></div>
+      </section>
+
+      <section>
+        <h3>sample condition sets</h3>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>condition ID</th><th>lot</th><th>solvent / buffer</th><th>concentration</th><th>additive</th><th>degas</th><th>temperature</th><th>vessel</th><th>note</th></tr></thead>
+            <tbody>
+              <tr>
+                <td data-label="condition ID"><input value="PBS-5uM"></td>
+                <td data-label="lot"><input value="260605"></td>
+                <td data-label="solvent / buffer"><input value="PBS pH 7.4 / DMSO 1%"></td>
+                <td data-label="concentration"><input value="5 uM"></td>
+                <td data-label="additive"><input value="-"></td>
+                <td data-label="degas"><input value="none"></td>
+                <td data-label="temperature"><input value="25 C"></td>
+                <td data-label="vessel"><input value="quartz cuvette 1 cm"></td>
+                <td data-label="note"><input value="standard condition"></td>
+              </tr>
+              <tr>
+                <td data-label="condition ID"><input value="enzyme-response"></td>
+                <td data-label="lot"><input value="260605"></td>
+                <td data-label="solvent / buffer"><input value="PBS pH 7.4"></td>
+                <td data-label="concentration"><input value="5 uM dye"></td>
+                <td data-label="additive"><input value="enzyme / substrate"></td>
+                <td data-label="degas"><input value="none"></td>
+                <td data-label="temperature"><input value="37 C"></td>
+                <td data-label="vessel"><input value="microplate"></td>
+                <td data-label="note"><input value="time course candidate"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="actions"><button type="button">condition set追加</button></div>
+      </section>
+
+      <section>
+        <h3>measurement events</h3>
+        <div class="event-list">
+          <article class="event-card">
+            <div class="event-head">
+              <label class="date-field">date<input type="date" value="2026-06-08"></label>
+              <label>purpose<input value="PBS中の基本スペクトル確認"></label>
+              <label>condition<select><option>PBS-5uM</option><option>enzyme-response</option></select></label>
+              <button type="button" class="danger">削除</button>
+            </div>
+            <div class="event-body">
+              <div class="card-grid">
+                <article class="card">
+                  <div class="card-title">Abs</div>
+                  <label>instrument<input value="UV-vis"></label>
+                  <label>range<input value="350-950 nm"></label>
+                  <label>interval<input value="1 nm"></label>
+                  <label>result<input value="lambda_abs_max 780 nm"></label>
+                </article>
+                <article class="card">
+                  <div class="card-title">FL emission</div>
+                  <label>instrument<input value="fluorometer"></label>
+                  <label>lambda_ex<input value="730 nm"></label>
+                  <label>Em range<input value="760-1000 nm"></label>
+                  <label>result<input value="lambda_em_max 820 nm"></label>
+                </article>
+                <article class="card">
+                  <div class="card-title">PA</div>
+                  <label>instrument<input value="PA setup"></label>
+                  <label>range<input value="680-900 nm"></label>
+                  <label>interval<input value="5 nm"></label>
+                  <label>result<input value="strong around 800 nm"></label>
+                </article>
+              </div>
+              <div class="grid-3">
+                <label>raw data folder<input placeholder="Drive / instrument folder URL"></label>
+                <label>representative figure<input placeholder="plot/image URL"></label>
+                <label>quick conclusion<input value="基本スペクトルは取得。代表値はtentative。"></label>
+              </div>
+              <label>observation / memo<textarea>沈殿なし。吸収はややブロード。PAは長波長側も確認する。</textarea></label>
+            </div>
+          </article>
+        </div>
+        <div class="actions"><button type="button">event追加</button><button type="button">最後のeventを複製</button><button type="button">eventから代表値へ反映</button></div>
+      </section>
+
+      <section>
+        <h3>raw data / figures</h3>
+        <div class="grid">
+          <label>raw data root<textarea placeholder="測定データフォルダ、解析notebook、Google Drive URL"></textarea></label>
+          <label>representative figures<textarea placeholder="代表スペクトル、PA画像、蛍光画像などのURL/ファイル名"></textarea></label>
+          <label>analysis memo<textarea placeholder="baseline補正、濃度補正、blank、reanalysis方針"></textarea></label>
+          <label>next measurements<textarea placeholder="serum, pH, enzyme, degas, concentration dependenceなど"></textarea></label>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script>
     const cellTab = document.getElementById("cellTab");
     const animalTab = document.getElementById("animalTab");
+    const opticalTab = document.getElementById("opticalTab");
     const cellDraft = document.getElementById("cellDraft");
     const animalDraft = document.getElementById("animalDraft");
+    const opticalDraft = document.getElementById("opticalDraft");
     function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
     function show(which){
+      const cell = which === "cell";
       const animal = which === "animal";
-      cellDraft.classList.toggle("hidden", animal);
+      const optical = which === "optical";
+      cellDraft.classList.toggle("hidden", !cell);
       animalDraft.classList.toggle("hidden", !animal);
-      cellTab.setAttribute("aria-selected", String(!animal));
+      opticalDraft.classList.toggle("hidden", !optical);
+      cellTab.setAttribute("aria-selected", String(cell));
       animalTab.setAttribute("aria-selected", String(animal));
-      cellTab.classList.toggle("primary", !animal);
+      opticalTab.setAttribute("aria-selected", String(optical));
+      cellTab.classList.toggle("primary", cell);
       animalTab.classList.toggle("primary", animal);
+      opticalTab.classList.toggle("primary", optical);
       autosizeAll();
     }
     cellTab.addEventListener("click", () => show("cell"));
     animalTab.addEventListener("click", () => show("animal"));
+    opticalTab.addEventListener("click", () => show("optical"));
     document.addEventListener("input", e=>{ if(e.target.matches("textarea")) autosizeAll(); });
     autosizeAll();
   </script>
