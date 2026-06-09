@@ -257,6 +257,7 @@
             return;
           }
           setEditor(rec.payload);
+          msg("Sheets保存済みノートを読み込みました。");
         } else {
           const n = state.notes.find(x => x.note_id === noteId);
           if (n) setEditor({...blankNote(), ...n, note_id: n.note_id});
@@ -290,7 +291,7 @@
       jsonp({kind:"notes"}, rows=>{
         state.notes=rows||[];
         msg("ノート一覧を読み込みました");
-        if (requestedNoteId && !state.currentId) loadNoteById(requestedNoteId);
+        if (requestedNoteId && (!state.currentId || fallbackTemplateRequested)) loadNoteById(requestedNoteId);
         if (duplicateFromId && !state.currentId) duplicateNoteById(duplicateFromId);
       });
     }
