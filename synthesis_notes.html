@@ -395,7 +395,6 @@
     const ongoingEmpty = document.getElementById("ongoing-empty");
     const completedEmpty = document.getElementById("completed-empty");
     const dialog = document.getElementById("finish-dialog");
-    const sheetsEndpointInput = document.getElementById("sheets-endpoint");
     const form = document.getElementById("finish-form");
     const finishedDate = document.getElementById("finished-date");
     const finishedOutcome = document.getElementById("finished-outcome");
@@ -447,7 +446,6 @@
       return localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
     }
 
-    if (sheetsEndpointInput) sheetsEndpointInput.value = sheetEndpoint();
 
     function todayString() {
       return new Date().toLocaleDateString("sv-SE");
@@ -829,13 +827,6 @@
       updateEmptyStates();
     }
     search.addEventListener("input", applySearch);
-    document.getElementById("save-sheets-endpoint")?.addEventListener("click", () => {
-      if (!sheetsEndpointInput) return;
-      localStorage.setItem(SHEETS_ENDPOINT_KEY, sheetsEndpointInput.value.trim());
-      showToast("Sheets URLを保存しました");
-      loadDynamicNotesFromSheets();
-      loadStatusFromSheets();
-    });
     document.getElementById("load-sheet-status")?.addEventListener("click", () => {
       showToast("Sheetsを再読込します");
       loadDynamicNotesFromSheets();

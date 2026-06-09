@@ -27,7 +27,8 @@
     input,button { border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:inherit; background:#fff; }
     input { flex:1 1 auto; min-width:0; }
     button { width:auto; cursor:pointer; color:var(--accent); font-weight:750; }
-    .toast { min-height:20px; margin-top:8px; color:var(--muted); font-size:13px; }
+    .toast,.endpoint-status { min-height:20px; margin-top:8px; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+    .endpoint-status strong { color:var(--accent); }
     footer { margin-top:18px; color:var(--muted); font-size:12px; }
     @media (max-width:640px) {
       .wrap { width:100%; margin:0; }
@@ -67,7 +68,10 @@
       <div class="settings-row">
         <input id="sheets-endpoint" type="url" placeholder="Apps Script Web App URL">
         <button type="button" id="save-sheets-endpoint">URL保存</button>
+        <button type="button" id="check-sheets-endpoint">URL確認</button>
       </div>
+      <p class="muted" style="margin-top:8px;">Mac/iPhoneの両方で同じURLをここに保存します。ノート本文にはURL設定欄を置きません。</p>
+      <div class="endpoint-status" id="endpoint-status">Apps Script URL未確認</div>
       <div class="toast" id="settings-message"></div>
     </details>
     <footer>noindex / nofollow</footer>
@@ -76,12 +80,52 @@
     const SHEETS_ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const endpointInput = document.getElementById("sheets-endpoint");
     const message = document.getElementById("settings-message");
+    const endpointStatus = document.getElementById("endpoint-status");
     endpointInput.value = localStorage.getItem(SHEETS_ENDPOINT_KEY) || "";
+    function setStatus(text) {
+      endpointStatus.textContent = text;
+    }
+    function checkEndpoint() {
+      const url = endpointInput.value.trim();
+      if (!url) {
+        setStatus("Apps Script URL未設定");
+        return;
+      }
+      setStatus("確認中: " + url);
+      const callbackName = "sheetsVersion_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      let finished = false;
+      window[callbackName] = data => {
+        finished = true;
+        const appName = data?.app_name || "(nameなし)";
+        const version = data?.app_version || "(versionなし)";
+        const updated = data?.updated_at || "";
+        endpointStatus.innerHTML = "<strong>接続OK</strong>: " + appName + " / " + version + (updated ? " / " + updated : "") + "<br>" + url;
+        script.remove();
+        delete window[callbackName];
+      };
+      script.onerror = () => {
+        finished = true;
+        setStatus("接続失敗: URLまたはApps Scriptの公開設定を確認してください / " + url);
+        delete window[callbackName];
+      };
+      script.src = url + (url.includes("?") ? "&" : "?") + "kind=version&callback=" + callbackName + "&_=" + Date.now();
+      document.body.append(script);
+      setTimeout(() => {
+        if (finished) return;
+        setStatus("接続タイムアウト: URLが違うか、Apps Scriptが公開されていません / " + url);
+        script.remove();
+        delete window[callbackName];
+      }, 8000);
+    }
     document.getElementById("save-sheets-endpoint").addEventListener("click", () => {
       localStorage.setItem(SHEETS_ENDPOINT_KEY, endpointInput.value.trim());
       message.textContent = "Sheets URLを保存しました。";
+      checkEndpoint();
       setTimeout(() => { message.textContent = ""; }, 1800);
     });
+    document.getElementById("check-sheets-endpoint").addEventListener("click", checkEndpoint);
+    if (endpointInput.value.trim()) checkEndpoint();
   </script>
 </body>
 </html>
