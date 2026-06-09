@@ -1,6 +1,6 @@
 const APP_NAME = 'Experimental Notes Sheets API';
-const APP_VERSION = '2026-06-09-v4-fixed-template-image-url';
-const APP_UPDATED_AT = '2026-06-09T15:25:00+09:00';
+const APP_VERSION = '2026-06-09-v5-date-serialization-save-verify';
+const APP_UPDATED_AT = '2026-06-09T15:45:00+09:00';
 const NOTES_SHEET = 'Notes';
 const EDITS_SHEET = 'Edits';
 const STATUS_SHEET = 'Status';
@@ -89,9 +89,20 @@ function rowsAsObjects_(sheet) {
   const headers = values[0].map(String);
   return values.slice(1).map(row => {
     const obj = {};
-    headers.forEach((header, index) => obj[header] = row[index]);
+    headers.forEach((header, index) => obj[header] = normalizeCell_(row[index], header));
     return obj;
   });
+}
+
+function normalizeCell_(value, header) {
+  if (value instanceof Date) {
+    const timezone = Session.getScriptTimeZone() || 'Asia/Tokyo';
+    if (header === 'date' || header === 'finished_date') {
+      return Utilities.formatDate(value, timezone, 'yyyy-MM-dd');
+    }
+    return Utilities.formatDate(value, timezone, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  }
+  return value;
 }
 
 function rowById_(sheet, id) {

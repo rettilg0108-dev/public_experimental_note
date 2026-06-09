@@ -372,7 +372,8 @@
       try {
         await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, note_type:"synthesis", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"synthesis", payload:{...data, note_type:"synthesis"}, updated_at:new Date().toISOString()});
-        msg("保存リクエストを送りました。top pageでSheets再読込すると表示されます。");
+        msg("保存リクエストを送りました。Sheetsから同じノートを読み直します: " + data.note_id);
+        setTimeout(() => loadNoteById(data.note_id), 1200);
       } finally {
         button.disabled = false;
         button.textContent = oldText;
