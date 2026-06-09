@@ -1,17 +1,27 @@
+const APP_NAME = 'Experimental Notes Sheets API';
+const APP_VERSION = '2026-06-09-v4-fixed-template-image-url';
+const APP_UPDATED_AT = '2026-06-09T15:25:00+09:00';
 const NOTES_SHEET = 'Notes';
 const EDITS_SHEET = 'Edits';
 const STATUS_SHEET = 'Status';
 
 function doGet(e) {
   const params = e.parameter || {};
-  const callback = params.callback || 'callback';
+  const callback = params.callback || '';
   let data;
-  if (params.kind === 'notes') {
+  if (params.kind === 'version' || (!params.kind && !callback)) {
+    data = version_();
+  } else if (params.kind === 'notes') {
     data = listNotes_();
   } else if (params.kind === 'edit') {
     data = getEdit_(params.note_id);
   } else {
     data = listStatus_();
+  }
+  if (!callback) {
+    return ContentService
+      .createTextOutput(JSON.stringify(data, null, 2))
+      .setMimeType(ContentService.MimeType.JSON);
   }
   return ContentService
     .createTextOutput(callback + '(' + JSON.stringify(data) + ');')
@@ -28,8 +38,22 @@ function doPost(e) {
     upsertStatus_(body);
   }
   return ContentService
-    .createTextOutput(JSON.stringify({ ok: true }))
+    .createTextOutput(JSON.stringify({ ok: true, app_name: APP_NAME, app_version: APP_VERSION }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function version_() {
+  return {
+    ok: true,
+    app_name: APP_NAME,
+    app_version: APP_VERSION,
+    updated_at: APP_UPDATED_AT,
+    sheets: {
+      notes: NOTES_SHEET,
+      edits: EDITS_SHEET,
+      status: STATUS_SHEET
+    }
+  };
 }
 
 function ss_() {
