@@ -169,6 +169,15 @@
     const params = new URLSearchParams(location.search);
     const requestedNoteId = params.get("note_id");
     const duplicateFromId = params.get("duplicate_from");
+    const OBSOLETE_NOTE_REDIRECTS = {
+      "2026-06-09-thiophene-lithiation-benzaldehyde": "2026-06-09-thiophene-lithiation-benzaldehyde-redone"
+    };
+    if (OBSOLETE_NOTE_REDIRECTS[requestedNoteId]) {
+      location.replace("index.html?note_id=" + encodeURIComponent(OBSOLETE_NOTE_REDIRECTS[requestedNoteId]) + "&fallback_template=1");
+    }
+    if (OBSOLETE_NOTE_REDIRECTS[duplicateFromId]) {
+      location.replace("index.html?duplicate_from=" + encodeURIComponent(OBSOLETE_NOTE_REDIRECTS[duplicateFromId]));
+    }
     const prefillData = decodePrefill(params.get("prefill"));
     const draftRequested = params.get("draft") === "1";
     const fixedTemplateRequested = params.get("fixed_template") === "1";
