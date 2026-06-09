@@ -1,6 +1,6 @@
 const APP_NAME = 'Experimental Notes Sheets API';
-const APP_VERSION = '2026-06-09-v6-dedupe-save-token';
-const APP_UPDATED_AT = '2026-06-09T16:45:00+09:00';
+const APP_VERSION = '2026-06-09-v7-archive-sync';
+const APP_UPDATED_AT = '2026-06-09T17:15:00+09:00';
 const NOTES_SHEET = 'Notes';
 const EDITS_SHEET = 'Edits';
 const STATUS_SHEET = 'Status';
@@ -12,7 +12,7 @@ function doGet(e) {
   if (params.kind === 'version' || (!params.kind && !callback)) {
     data = version_();
   } else if (params.kind === 'notes') {
-    data = listNotes_();
+    data = listNotes_(params.include_archived === '1' || params.include_archived === 'true');
   } else if (params.kind === 'edit') {
     data = getEdit_(params.note_id);
   } else {
@@ -197,7 +197,7 @@ function upsertStatus_(body) {
   deleteDuplicateRowsById_(sheet, body.note_id, existingRow > 0 ? existingRow : sheet.getLastRow());
 }
 
-function listNotes_() {
+function listNotes_(includeArchived) {
   const sheet = sheet_(NOTES_SHEET, noteHeaders_());
   const latest = {};
   rowsAsObjects_(sheet).forEach(row => {
@@ -208,7 +208,7 @@ function listNotes_() {
     }
   });
   return Object.values(latest)
-    .filter(row => String(row.archived).toLowerCase() !== 'true')
+    .filter(row => includeArchived || String(row.archived).toLowerCase() !== 'true')
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 }
 

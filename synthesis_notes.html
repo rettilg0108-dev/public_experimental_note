@@ -537,6 +537,7 @@
 
     function createDynamicNote(row) {
       if (isOpticalRow(row)) return null;
+      if (String(row.archived).toLowerCase() === "true") return null;
       if (!row.note_id || loadDeletedNoteIds().has(row.note_id) || document.querySelector('.note[data-note-id="' + CSS.escape(row.note_id) + '"]')) return null;
       const appPath = "dynamic_note_app/index.html";
       const href = appPath + "?note_id=" + encodeURIComponent(row.note_id);
@@ -605,6 +606,15 @@
         applySearch();
       });
       return note;
+    }
+
+    function removeArchivedNotes(rows) {
+      for (const row of rows || []) {
+        if (!row.note_id || String(row.archived).toLowerCase() !== "true") continue;
+        markNoteDeleted(row.note_id);
+        document.querySelectorAll('.note[data-note-id="' + CSS.escape(row.note_id) + '"]').forEach(note => note.remove());
+      }
+      notes = notes.filter(note => note.isConnected);
     }
 
     function notePrefill(note) {
@@ -694,6 +704,7 @@
       const callbackName = "receiveSheetNotes_" + Date.now();
       window[callbackName] = rows => {
         const created = [];
+        removeArchivedNotes(rows);
         for (const row of rows || []) {
           const note = createDynamicNote(row);
           if (note) {
@@ -708,7 +719,7 @@
         delete window[callbackName];
       };
       const script = document.createElement("script");
-      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "kind=notes&callback=" + callbackName + "&_=" + Date.now();
+      script.src = endpoint + (endpoint.includes("?") ? "&" : "?") + "kind=notes&include_archived=1&callback=" + callbackName + "&_=" + Date.now();
       script.onerror = () => delete window[callbackName];
       document.body.append(script);
     }
