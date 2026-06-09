@@ -172,6 +172,7 @@
     const prefillData = decodePrefill(params.get("prefill"));
     const draftRequested = params.get("draft") === "1";
     const fixedTemplateRequested = params.get("fixed_template") === "1";
+    const fallbackTemplateRequested = params.get("fallback_template") === "1";
     const defaultReagents = () => [
       { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
       { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
@@ -200,7 +201,7 @@
       }
     }
     function readDraft() {
-      if (!draftRequested) return null;
+      if (!draftRequested && !fallbackTemplateRequested) return null;
       try {
         const draft = JSON.parse(localStorage.getItem(DUPLICATE_DRAFT_KEY) || "null");
         localStorage.removeItem(DUPLICATE_DRAFT_KEY);
@@ -259,6 +260,7 @@
         } else {
           const n = state.notes.find(x => x.note_id === noteId);
           if (n) setEditor({...blankNote(), ...n, note_id: n.note_id});
+          else if (fallbackTemplateRequested) msg("Sheets未保存のため、テンプレートを表示しています。Save to Sheets で同期開始できます。");
           else msg("指定ノートが見つかりません");
         }
       });
@@ -417,8 +419,8 @@
     const draftData = readDraft();
     if (draftData || prefillData) {
       const incomingData = {...blankNote(), ...(draftData || prefillData)};
-      setEditor(fixedTemplateRequested ? asFixedTemplate(incomingData) : asDuplicate(incomingData));
-      msg(fixedTemplateRequested ? "固定IDの新規ノートを読み込みました。Save to Sheets すると端末間で同じノートとして同期されます。" : "複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
+      setEditor((fixedTemplateRequested || fallbackTemplateRequested) ? asFixedTemplate(incomingData) : asDuplicate(incomingData));
+      msg((fixedTemplateRequested || fallbackTemplateRequested) ? "固定IDの新規ノートを読み込みました。Save to Sheets すると端末間で同じノートとして同期されます。" : "複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
     }
     if(endpoint()) loadNotes();
     else msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
