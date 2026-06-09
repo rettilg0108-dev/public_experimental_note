@@ -190,7 +190,21 @@
     let msgTimer = null;
     function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
     function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
-    function today(){ return new Date().toLocaleDateString("sv-SE"); }
+    function localDateString(date = new Date()){
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    function normalizeDate(value, fallback = localDateString()){
+      const text = String(value || "").trim();
+      const iso = text.match(/\d{4}-\d{2}-\d{2}/);
+      if (iso) return iso[0];
+      const slash = text.match(/(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})/);
+      if (slash) return `${slash[1]}-${slash[2].padStart(2, "0")}-${slash[3].padStart(2, "0")}`;
+      return fallback;
+    }
+    function today(){ return localDateString(); }
     function slug(value){ return String(value||"optical-note").trim().toLowerCase().replace(/[^a-z0-9一-龯ぁ-んァ-ンー]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) || "optical-note"; }
     function noteTitle(){ return "Optical analysis: " + (q("#displayName").value || q("#compoundId").value || "compound"); }
     function noteId(){ return [q("#date").value || today(), "optical", slug(q("#displayName").value || q("#compoundId").value)].join("-") + "-" + Math.random().toString(36).slice(2,5); }
@@ -252,10 +266,17 @@
       const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
       const name="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
       const script=document.createElement("script");
-      window[name]=data=>{ cb(data); script.remove(); delete window[name]; };
+      let finished = false;
+      window[name]=data=>{ finished = true; cb(data); script.remove(); delete window[name]; };
       script.src=url+"?"+new URLSearchParams({...params,callback:name,_:Date.now()}).toString();
-      script.onerror=()=>{ msg("Sheets読込失敗"); delete window[name]; };
+      script.onerror=()=>{ finished = true; msg("Sheets読込失敗"); delete window[name]; };
       document.body.append(script);
+      setTimeout(()=>{
+        if (finished) return;
+        msg("Sheets読込タイムアウト。入口のURL確認、Apps Script公開設定、最新版デプロイを確認してください。");
+        script.remove();
+        delete window[name];
+      }, 9000);
     }
     function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
     function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
@@ -403,7 +424,8 @@
     function setEditor(data){
       state.currentId=data.note_id || "";
       const note={...blankNote(), ...data, presets:{...presetDefaults, ...(data.presets||{})}};
-      ["date","project","compoundId","displayName","mw","storage","sourceNote","keywords","links","memo"].forEach(k=>q("#"+k).value=note[k]||"");
+      ["project","compoundId","displayName","mw","storage","sourceNote","keywords","links","memo"].forEach(k=>q("#"+k).value=note[k]||"");
+      q("#date").value = normalizeDate(note.date, today());
       q("#structurePreview").hidden = !note.structureImage;
       q("#structurePreview").src = note.structureImage || "";
       document.title=note.title || noteTitle();
@@ -416,16 +438,25 @@
       autosizeAll();
     }
     function asDuplicate(data){ return {...data, note_id:"", date:today(), status:"ongoing"}; }
-    function loadNoteById(id, duplicate=false){
+    function loadNoteById(id, duplicate=false, options={}){
       jsonp({kind:"edit", note_id:id}, rec=>{
-        if(rec?.payload) { setEditor(duplicate ? asDuplicate(rec.payload) : rec.payload); msg(duplicate ? "複製元を読み込みました" : "読み込みました"); }
+        if(rec?.payload) {
+          if(options.expectSaved && options.saveToken && rec.payload._save_token !== options.saveToken) {
+            msg("保存確認NG: Sheetsから返った内容が今回保存した版ではありません。Apps Script URL/デプロイ先/Sheetを確認してください。");
+            return;
+          }
+          setEditor(duplicate ? asDuplicate(rec.payload) : rec.payload);
+          msg(options.expectSaved ? "保存確認OK: Sheets保存済みノートを読み込みました。" : (duplicate ? "複製元を読み込みました" : "読み込みました"));
+        }
         else msg("指定ノートが見つかりません");
       });
     }
     async function saveCurrent(){
       const button=q("#saveNote"), old=button.textContent;
       button.disabled=true; button.textContent="Saving..."; msg("Sheetsへ保存リクエストを送信中...");
-      const data=collect(); state.currentId=data.note_id;
+      const data=collect();
+      data._save_token = Date.now() + "-" + Math.random().toString(36).slice(2);
+      state.currentId=data.note_id;
       try{
         const payloadLength = JSON.stringify(data).length;
         if (payloadLength > 45000) {
@@ -434,7 +465,8 @@
         await post({kind:"note", note_id:data.note_id, date:data.measurementStart || data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:"optical", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"optical", payload:data, updated_at:new Date().toISOString()});
         history.replaceState(null, "", "?note_id=" + encodeURIComponent(data.note_id));
-        msg("保存リクエストを送りました。このページは同じノートIDで更新されます。");
+        msg("保存リクエストを送りました。Sheetsから同じノートを読み直します: " + data.note_id);
+        setTimeout(() => loadNoteById(data.note_id, false, {expectSaved:true, saveToken:data._save_token}), 1600);
       } finally { button.disabled=false; button.textContent=old; }
     }
     function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }

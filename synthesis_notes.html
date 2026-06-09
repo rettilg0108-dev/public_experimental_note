@@ -448,7 +448,11 @@
 
 
     function todayString() {
-      return new Date().toLocaleDateString("sv-SE");
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
     }
 
     function statusId(note) {
@@ -625,9 +629,9 @@
     }
 
     function duplicateStaticNote(note) {
-      localStorage.setItem(DUPLICATE_DRAFT_KEY, JSON.stringify(notePrefill(note)));
-      showToast("複製テンプレートを作成しました");
-      location.href = "dynamic_note_app/index.html?draft=1";
+      const id = statusId(note);
+      showToast("Sheets本文から複製元を読み込みます");
+      location.href = "dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(id);
     }
 
     function openStaticTemplateNote(note) {
@@ -673,8 +677,8 @@
       const text = String(value || "").trim();
       const iso = text.match(/\d{4}-\d{2}-\d{2}/);
       if (iso) return iso[0];
-      const parsed = new Date(text);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString("sv-SE");
+      const slash = text.match(/(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})/);
+      if (slash) return `${slash[1]}-${slash[2].padStart(2, "0")}-${slash[3].padStart(2, "0")}`;
       return text;
     }
 

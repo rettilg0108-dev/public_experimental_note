@@ -179,7 +179,21 @@
     ];
     if ((requestedNoteId || duplicateFromId) && endpoint()) document.body.classList.add("note-view");
     function endpoint() { return localStorage.getItem(ENDPOINT_KEY) || ""; }
-    function today() { return new Date().toLocaleDateString("sv-SE"); }
+    function localDateString(date = new Date()) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    function normalizeDate(value, fallback = localDateString()) {
+      const text = String(value || "").trim();
+      const iso = text.match(/\d{4}-\d{2}-\d{2}/);
+      if (iso) return iso[0];
+      const slash = text.match(/(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})/);
+      if (slash) return `${slash[1]}-${slash[2].padStart(2, "0")}-${slash[3].padStart(2, "0")}`;
+      return fallback;
+    }
+    function today() { return localDateString(); }
     function slug(value) {
       return String(value || "synthesis-note").trim().toLowerCase()
         .replace(/[^a-z0-9一-龯ぁ-んァ-ンー]+/g, "-")
@@ -225,7 +239,7 @@
       return {
         ...data,
         note_id: data.note_id || "",
-        date: data.date || today(),
+        date: normalizeDate(data.date, today()),
         status: data.status || "ongoing",
         operations: data.operations || [{date:"", time:"", text:""}],
         memo: data.memo || "",
@@ -237,11 +251,18 @@
     function jsonp(params, cb){
       const url=endpoint(); if(!url){ msg("Apps Script URL未設定"); return; }
       const name="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
-      window[name]=data=>{ cb(data); script.remove(); delete window[name]; };
       const script=document.createElement("script");
+      let finished = false;
+      window[name]=data=>{ finished = true; cb(data); script.remove(); delete window[name]; };
       script.src=url+"?"+new URLSearchParams({...params,callback:name}).toString();
-      script.onerror=()=>{ msg("Sheets読込失敗"); delete window[name]; };
+      script.onerror=()=>{ finished = true; msg("Sheets読込失敗"); delete window[name]; };
       document.body.append(script);
+      setTimeout(() => {
+        if (finished) return;
+        msg("Sheets読込タイムアウト。入口のURL確認、Apps Script公開設定、最新版デプロイを確認してください。");
+        script.remove();
+        delete window[name];
+      }, 9000);
     }
     function renderList(){
       return state.notes.map(n => `<article class="note-card ${n.note_id===state.currentId?"active":""}" data-id="${n.note_id}">
@@ -254,6 +275,10 @@
         if (rec?.payload) {
           if (rec.payload.note_type === "optical") {
             location.replace("../optical_dynamic_note_app/index.html?note_id=" + encodeURIComponent(noteId));
+            return;
+          }
+          if (options.expectSaved && options.saveToken && rec.payload._save_token !== options.saveToken) {
+            msg("保存確認NG: Sheetsから返った内容が今回保存した版ではありません。Apps Script URL/デプロイ先/Sheetを確認してください。");
             return;
           }
           setEditor(rec.payload);
@@ -279,13 +304,7 @@
           setEditor(asDuplicate(rec.payload));
           msg("複製元を読み込みました。日付と条件を確認して Save to Sheets してください。");
         } else {
-          const n = state.notes.find(x => x.note_id === noteId);
-          if (n) {
-            setEditor(asDuplicate({...blankNote(), ...n}));
-            msg("複製元の概要を読み込みました。必要項目を補って Save to Sheets してください。");
-          } else {
-            msg("複製元が見つかりません");
-          }
+          msg("複製できません。Sheets本文payloadを取得できていないため、古い概要からは複製しません。入口のURL確認とApps Script v5以降を確認してください: " + noteId);
         }
       });
     }
@@ -302,7 +321,8 @@
     }
     function setEditor(data){
       state.currentId=data.note_id;
-      ["date","method","product","title","keywords","subtitle","status","scale","conc","solvent","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
+      ["method","product","title","keywords","subtitle","status","scale","conc","solvent","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
+      q("#date").value = normalizeDate(data.date, today());
       q("#title").value = data.title || titleFromFields(data.method, data.product);
       const shownTitle = q("#title").value || "Synthesis Experiment Note";
       document.title = shownTitle;
@@ -370,12 +390,14 @@
       button.disabled = true;
       button.textContent = "Saving...";
       msg("Sheetsへ保存リクエストを送信中...");
-      const data=collect(); state.currentId=data.note_id;
+      const data=collect();
+      data._save_token = Date.now() + "-" + Math.random().toString(36).slice(2);
+      state.currentId=data.note_id;
       try {
         await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, note_type:"synthesis", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"synthesis", payload:{...data, note_type:"synthesis"}, updated_at:new Date().toISOString()});
         msg("保存リクエストを送りました。Sheetsから同じノートを読み直します: " + data.note_id);
-        setTimeout(() => loadNoteById(data.note_id, {expectSaved: true}), 1600);
+        setTimeout(() => loadNoteById(data.note_id, {expectSaved: true, saveToken: data._save_token}), 1600);
       } finally {
         button.disabled = false;
         button.textContent = oldText;
