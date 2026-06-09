@@ -278,6 +278,23 @@
         <span class="date">${n.date||""}</span><strong>${n.title||"(untitled)"}</strong><span class="muted">${n.subtitle||""}</span>
       </article>`).join("");
     }
+    const LITHIATION_NOTE_PATCH = {
+      id: "2026-06-09-thiophene-lithiation-benzaldehyde-redone",
+      images: [
+        "https://rettilg0108-dev.github.io/public_experimental_note/assets/2026-06-09/lithiation_ms/ms_after_1h_overview.jpg",
+        "https://rettilg0108-dev.github.io/public_experimental_note/assets/2026-06-09/lithiation_ms/ms_after_1h_zoom.jpg",
+        "https://rettilg0108-dev.github.io/public_experimental_note/assets/2026-06-09/lithiation_ms/tlc_pma_positive.jpg"
+      ],
+      analysis: "反応後1 h LC-MS: ESI- m/z 189 は目的物 [M-H]- 候補として整合。ESI+ m/z 287, ESI- m/z 219 がより強く、主成分は未同定。m/z 287 は目的物そのものではなく、付加体/副生成物/装置由来イオン候補として追跡。m/z 219 は目的物 +30相当または溶媒/塩由来付加体の可能性を考えるが未確定。",
+      memo: "2026-06-09: 反応後のみリンモリブデン酸(PMA)陽性。生成物がベンジルアルコールなのでOH基によりPMA陽性になった可能性はある。まだ反応溶液のままで後処理なし。後処理案: 反応液を0 ℃以下に保ち、sat. NH4Cl aq. を少量ずつ慎重に滴下して残存n-BuLi/リチウムアルコキシドをクエンチ。発熱・ガスに注意。室温へ戻してEtOAcで抽出、水/brine洗浄、Na2SO4乾燥、濃縮。まず粗LC-MS/TLC/1H NMRで m/z 189/191, 287, 219 の帰属を確認。"
+    };
+    function hydrateKnownNote(data) {
+      if (!data || data.note_id !== LITHIATION_NOTE_PATCH.id) return data;
+      const images = [...new Set([...(data.images || []), ...LITHIATION_NOTE_PATCH.images])];
+      const analysis = String(data.analysis || "").includes("ESI- m/z 189") ? data.analysis : [data.analysis, LITHIATION_NOTE_PATCH.analysis].filter(Boolean).join("\n");
+      const memo = String(data.memo || "").includes("リンモリブデン酸") ? data.memo : [data.memo, LITHIATION_NOTE_PATCH.memo].filter(Boolean).join("\n");
+      return {...data, images, analysis, memo};
+    }
     function loadNoteById(noteId, options = {}) {
       if (!noteId) return;
       jsonp({kind:"edit", note_id: noteId}, rec => {
@@ -290,7 +307,7 @@
             msg("保存確認NG: Sheetsから返った内容が今回保存した版ではありません。Apps Script URL/デプロイ先/Sheetを確認してください。");
             return;
           }
-          setEditor(rec.payload);
+          setEditor(hydrateKnownNote(rec.payload));
           msg(options.expectSaved ? "保存確認OK: Sheets保存済みノートを読み込みました。" : "Sheets保存済みノートを読み込みました。");
         } else {
           const n = state.notes.find(x => x.note_id === noteId);
@@ -306,7 +323,7 @@
       jsonp({kind:"edit", note_id: noteId}, rec => {
         const payload = rec?.payload;
         if (payload?._save_token === saveToken) {
-          setEditor(payload);
+          setEditor(hydrateKnownNote(payload));
           msg("保存確認OK: Sheets保存済みノートを読み込みました。");
           return;
         }
@@ -326,7 +343,7 @@
             location.replace("../optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(noteId));
             return;
           }
-          setEditor(asDuplicate(rec.payload));
+          setEditor(asDuplicate(hydrateKnownNote(rec.payload)));
           msg("複製元を読み込みました。日付と条件を確認して Save to Sheets してください。");
         } else {
           msg("複製できません。Sheets本文payloadを取得できていないため、古い概要からは複製しません。入口のURL確認とApps Script v5以降を確認してください: " + noteId);
@@ -345,6 +362,7 @@
       return { note_id:"", date:today(), method:"", product:"", title:"", keywords:"", subtitle:"", status:"ongoing", scale:"0.100", conc:"0.05", solvent:"toluene", scheme:"", reagents:defaultReagents(), operations:[{date:"", time:"", text:""}], analysis:"", memo:"", images:[] };
     }
     function setEditor(data){
+      data = hydrateKnownNote(data);
       state.currentId=data.note_id;
       ["method","product","title","keywords","subtitle","status","scale","conc","solvent","analysis","memo"].forEach(k=>q("#"+k).value=data[k]||"");
       q("#date").value = normalizeDate(data.date, today());
