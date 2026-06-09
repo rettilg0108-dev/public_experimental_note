@@ -171,6 +171,7 @@
     const duplicateFromId = params.get("duplicate_from");
     const prefillData = decodePrefill(params.get("prefill"));
     const draftRequested = params.get("draft") === "1";
+    const fixedTemplateRequested = params.get("fixed_template") === "1";
     const defaultReagents = () => [
       { name:"substrate", role:"limiting", mw:100, eq:1, unit:"eq", density:"", liquid:false },
       { name:"reagent", role:"reagent", mw:100, eq:1, unit:"eq", density:"", liquid:false }
@@ -214,6 +215,17 @@
         note_id: "",
         date: today(),
         status: "ongoing",
+        operations: data.operations || [{date:"", time:"", text:""}],
+        memo: data.memo || "",
+        analysis: data.analysis || ""
+      };
+    }
+    function asFixedTemplate(data) {
+      return {
+        ...data,
+        note_id: data.note_id || "",
+        date: data.date || today(),
+        status: data.status || "ongoing",
         operations: data.operations || [{date:"", time:"", text:""}],
         memo: data.memo || "",
         analysis: data.analysis || ""
@@ -404,8 +416,9 @@
     setEditor(blankNote());
     const draftData = readDraft();
     if (draftData || prefillData) {
-      setEditor(asDuplicate({...blankNote(), ...(draftData || prefillData)}));
-      msg("複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
+      const incomingData = {...blankNote(), ...(draftData || prefillData)};
+      setEditor(fixedTemplateRequested ? asFixedTemplate(incomingData) : asDuplicate(incomingData));
+      msg(fixedTemplateRequested ? "固定IDの新規ノートを読み込みました。Save to Sheets すると端末間で同じノートとして同期されます。" : "複製テンプレートを読み込みました。日付と条件を確認して Save to Sheets してください。");
     }
     if(endpoint()) loadNotes();
     else msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
