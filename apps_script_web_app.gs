@@ -1,6 +1,6 @@
 const APP_NAME = 'Experimental Notes Sheets API';
-const APP_VERSION = '2026-06-09-v5-date-serialization-save-verify';
-const APP_UPDATED_AT = '2026-06-09T15:45:00+09:00';
+const APP_VERSION = '2026-06-09-v6-dedupe-save-token';
+const APP_UPDATED_AT = '2026-06-09T16:45:00+09:00';
 const NOTES_SHEET = 'Notes';
 const EDITS_SHEET = 'Edits';
 const STATUS_SHEET = 'Status';
@@ -105,15 +105,32 @@ function normalizeCell_(value, header) {
   return value;
 }
 
-function rowById_(sheet, id) {
+function rowsById_(sheet, id) {
   const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return -1;
+  if (values.length < 2) return [];
   const headers = values[0].map(String);
   const idCol = headers.indexOf('note_id');
+  const updatedCol = headers.indexOf('updated_at');
+  const matches = [];
   for (let i = 1; i < values.length; i++) {
-    if (String(values[i][idCol]) === String(id)) return i + 1;
+    if (String(values[i][idCol]) === String(id)) {
+      matches.push({ rowNumber: i + 1, updated_at: updatedCol >= 0 ? normalizeCell_(values[i][updatedCol], 'updated_at') : '' });
+    }
   }
-  return -1;
+  return matches.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+}
+
+function rowById_(sheet, id) {
+  const rows = rowsById_(sheet, id);
+  return rows.length ? rows[0].rowNumber : -1;
+}
+
+function deleteDuplicateRowsById_(sheet, id, keepRowNumber) {
+  rowsById_(sheet, id)
+    .map(item => item.rowNumber)
+    .filter(rowNumber => rowNumber !== keepRowNumber)
+    .sort((a, b) => b - a)
+    .forEach(rowNumber => sheet.deleteRow(rowNumber));
 }
 
 function writeObject_(sheet, headers, rowNumber, object) {
@@ -145,6 +162,7 @@ function upsertNote_(body) {
     updated_at: body.updated_at || new Date().toISOString()
   };
   writeObject_(sheet, headers, existingRow, record);
+  deleteDuplicateRowsById_(sheet, body.note_id, existingRow > 0 ? existingRow : sheet.getLastRow());
 }
 
 function upsertEdit_(body) {
@@ -159,6 +177,7 @@ function upsertEdit_(body) {
     updated_at: body.updated_at || new Date().toISOString()
   };
   writeObject_(sheet, headers, existingRow, record);
+  deleteDuplicateRowsById_(sheet, body.note_id, existingRow > 0 ? existingRow : sheet.getLastRow());
 }
 
 function upsertStatus_(body) {
@@ -175,6 +194,7 @@ function upsertStatus_(body) {
     updated_at: body.updated_at || new Date().toISOString()
   };
   writeObject_(sheet, headers, existingRow, record);
+  deleteDuplicateRowsById_(sheet, body.note_id, existingRow > 0 ? existingRow : sheet.getLastRow());
 }
 
 function listNotes_() {

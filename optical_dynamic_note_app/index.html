@@ -451,6 +451,22 @@
         else msg("指定ノートが見つかりません");
       });
     }
+    function verifySaved(id, saveToken, attempt=1){
+      jsonp({kind:"edit", note_id:id}, rec=>{
+        const payload = rec?.payload;
+        if(payload?._save_token === saveToken) {
+          setEditor(payload);
+          msg("保存確認OK: Sheets保存済みノートを読み込みました。");
+          return;
+        }
+        if(attempt < 6) {
+          msg("保存反映待ち... " + attempt + "/6");
+          setTimeout(()=>verifySaved(id, saveToken, attempt + 1), 1800);
+          return;
+        }
+        msg("保存確認NG: Sheetsから返った内容が今回保存した版ではありません。Apps Script URL/デプロイ先/Sheetを確認してください。");
+      });
+    }
     async function saveCurrent(){
       const button=q("#saveNote"), old=button.textContent;
       button.disabled=true; button.textContent="Saving..."; msg("Sheetsへ保存リクエストを送信中...");
@@ -466,7 +482,7 @@
         await post({kind:"edit", note_id:data.note_id, note_type:"optical", payload:data, updated_at:new Date().toISOString()});
         history.replaceState(null, "", "?note_id=" + encodeURIComponent(data.note_id));
         msg("保存リクエストを送りました。Sheetsから同じノートを読み直します: " + data.note_id);
-        setTimeout(() => loadNoteById(data.note_id, false, {expectSaved:true, saveToken:data._save_token}), 1600);
+        setTimeout(() => verifySaved(data.note_id, data._save_token), 1600);
       } finally { button.disabled=false; button.textContent=old; }
     }
     function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }

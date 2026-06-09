@@ -293,6 +293,22 @@
         }
       });
     }
+    function verifySaved(noteId, saveToken, attempt = 1) {
+      jsonp({kind:"edit", note_id: noteId}, rec => {
+        const payload = rec?.payload;
+        if (payload?._save_token === saveToken) {
+          setEditor(payload);
+          msg("保存確認OK: Sheets保存済みノートを読み込みました。");
+          return;
+        }
+        if (attempt < 6) {
+          msg("保存反映待ち... " + attempt + "/6");
+          setTimeout(() => verifySaved(noteId, saveToken, attempt + 1), 1800);
+          return;
+        }
+        msg("保存確認NG: Sheetsから返った内容が今回保存した版ではありません。Apps Script URL/デプロイ先/Sheetを確認してください。");
+      });
+    }
     function duplicateNoteById(noteId) {
       if (!noteId) return;
       jsonp({kind:"edit", note_id: noteId}, rec => {
@@ -397,7 +413,7 @@
         await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:data.status, note_type:"synthesis", archived:false, updated_at:new Date().toISOString()});
         await post({kind:"edit", note_id:data.note_id, note_type:"synthesis", payload:{...data, note_type:"synthesis"}, updated_at:new Date().toISOString()});
         msg("保存リクエストを送りました。Sheetsから同じノートを読み直します: " + data.note_id);
-        setTimeout(() => loadNoteById(data.note_id, {expectSaved: true, saveToken: data._save_token}), 1600);
+        setTimeout(() => verifySaved(data.note_id, data._save_token), 1600);
       } finally {
         button.disabled = false;
         button.textContent = oldText;
