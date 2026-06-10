@@ -152,7 +152,7 @@
 
       <div class="row">
         <button class="primary" id="saveNote" type="button">Save to Sheets</button>
-        <button id="archiveNote" type="button">アーカイブ</button>
+        <button id="archiveNote" class="danger" type="button">削除/アーカイブ</button>
       </div>
     </main>
   </div>
@@ -640,7 +640,16 @@
     }
     function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
     q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
-    q("#archiveNote").onclick=async()=>{ const data=collect(); await post({kind:"note", ...data, note_type:"optical", archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
+    q("#archiveNote").onclick=async()=>{
+      if(!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
+      const data=collect();
+      await post({kind:"note", ...data, note_type:"optical", archived:true, updated_at:new Date().toISOString()});
+      msg("削除/アーカイブしました。");
+      const link = document.createElement("a");
+      link.href = "../category_notes.html?type=optical";
+      link.textContent = "光学一覧へ";
+      q("#msg").append(" ", link);
+    };
     q("#addSummary").onclick=()=>{ const rows=readSummaries(); rows.push(summaryBlank()); renderSummaries(rows); };
     q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",date:"",state:"",storage:"",note:""}); renderLots(rows); renderOptions(readPresets()); };
     q("#addEvent").onclick=()=>{ const rows=readEvents(); rows.push(eventBlank()); renderEvents(rows); };

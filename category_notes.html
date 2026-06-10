@@ -11,7 +11,7 @@
     * { box-sizing:border-box; }
     body { margin:0; color:var(--ink); background:var(--bg); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; line-height:1.55; -webkit-text-size-adjust:100%; }
     .wrap { width:min(980px, calc(100% - 32px)); margin:32px auto; }
-    header,.note,.empty { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header,.note,.empty,dialog { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
     header { border-top:5px solid var(--accent); padding:26px 28px; margin-bottom:16px; }
     h1 { margin:0 0 6px; font-size:28px; letter-spacing:0; }
     h2 { margin:18px 0 10px; font-size:18px; letter-spacing:0; }
@@ -31,9 +31,19 @@
     .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .status,.tag { display:inline-flex; align-items:center; min-height:22px; padding:2px 8px; border-radius:999px; font-size:12px; background:var(--soft); color:#28546a; }
     .tag { background:#f4f6f8; color:var(--muted); }
+    .complete-summary { color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
     .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
     .actions button { min-height:34px; padding:6px 10px; }
+    .actions .danger { color:var(--danger); border-color:#e2b9c0; background:#fff8f9; }
     .empty { padding:14px 16px; color:var(--muted); border-style:dashed; }
+    dialog { width:min(460px, calc(100% - 28px)); padding:0; box-shadow:0 18px 48px rgba(20,35,50,.22); }
+    dialog::backdrop { background:rgba(31,41,51,.38); }
+    .dialog-body { padding:18px; display:grid; gap:12px; }
+    .dialog-title { margin:0; font-weight:800; font-size:17px; }
+    .dialog-body label { display:grid; gap:5px; color:var(--muted); font-size:14px; font-weight:650; }
+    .dialog-body input,.dialog-body select,.dialog-body textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:inherit; background:#fff; }
+    .dialog-body textarea { min-height:88px; resize:vertical; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
     .toast { position:fixed; left:50%; bottom:18px; z-index:30; transform:translateX(-50%); padding:9px 12px; color:#fff; background:rgba(31,41,51,.94); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; }
     .toast.show { opacity:1; }
     footer { margin-top:18px; color:var(--muted); font-size:12px; }
@@ -65,13 +75,39 @@
       <div class="empty" id="ongoing-empty" hidden>進行中のノートはありません。</div>
     </section>
     <section class="section">
-      <h2>終了・アーカイブ</h2>
+      <h2>終了</h2>
       <div class="list" id="closed"></div>
-      <div class="empty" id="closed-empty" hidden>終了・アーカイブ済みノートはありません。</div>
+      <div class="empty" id="closed-empty" hidden>終了済みノートはありません。</div>
     </section>
     <footer>noindex / nofollow</footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="finish-dialog">
+    <form method="dialog" class="dialog-body" id="finish-form">
+      <p class="dialog-title">実験を終了登録</p>
+      <label>
+        終了日
+        <input id="finished-date" type="date" required>
+      </label>
+      <label>
+        結果
+        <select id="finished-outcome" required>
+          <option value="追加検討必要">追加検討必要</option>
+          <option value="成功">成功</option>
+          <option value="失敗/中止">失敗/中止</option>
+          <option value="保留">保留</option>
+        </select>
+      </label>
+      <label>
+        コメント
+        <textarea id="finished-comment" placeholder="追加測定、解析待ち、目的の変化を確認、など"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="finish-cancel">Cancel</button>
+        <button value="save" type="submit">保存して終了実験へ</button>
+      </div>
+    </form>
+  </dialog>
   <script>
     const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const params = new URLSearchParams(location.search);
@@ -103,7 +139,14 @@
     const closed = document.getElementById("closed");
     const search = document.getElementById("search");
     const toast = document.getElementById("toast");
+    const dialog = document.getElementById("finish-dialog");
+    const finishForm = document.getElementById("finish-form");
+    const finishedDate = document.getElementById("finished-date");
+    const finishedOutcome = document.getElementById("finished-outcome");
+    const finishedComment = document.getElementById("finished-comment");
     let rows = [];
+    let statuses = {};
+    let activeRow = null;
     let timer = null;
     document.title = config.title;
     document.getElementById("page-title").textContent = config.title;
@@ -119,6 +162,21 @@
     }
     function showToast(text){ toast.textContent=text; toast.classList.add("show"); clearTimeout(timer); timer=setTimeout(()=>toast.classList.remove("show"),1800); }
     function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+    function today(){
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    }
+    function outcomeText(record) {
+      return [record?.finished_date || record?.finishedDate, record?.outcome, record?.comment].filter(Boolean).join(" / ");
+    }
+    function statusFor(row) {
+      return statuses[row.note_id] || {};
+    }
+    function isCompleted(row) {
+      const record = statusFor(row);
+      if (record.status) return record.status === "completed";
+      return row.status === "completed";
+    }
     function jsonp(params, cb) {
       const url = endpoint();
       if (!url) { showToast("入口でApps Script URLを設定してください"); return; }
@@ -135,6 +193,9 @@
       const url = endpoint();
       if (!url) throw new Error("入口でApps Script URLを設定してください");
       await fetch(url, {method:"POST", mode:"no-cors", body:JSON.stringify(body)});
+    }
+    async function postStatus(record) {
+      await post({kind:"status", ...record});
     }
     function editorHref(row) {
       if (type === "optical") return "optical_dynamic_note_app/index.html?note_id=" + encodeURIComponent(row.note_id);
@@ -167,10 +228,10 @@
       const q = search.value.trim().toLowerCase();
       ongoing.innerHTML = "";
       closed.innerHTML = "";
-      const filtered = rows.filter(row => !q || [row.date,row.title,row.subtitle,row.method,row.product,row.keywords,row.status].join(" ").toLowerCase().includes(q));
+      const filtered = rows.filter(row => !q || [row.date,row.title,row.subtitle,row.method,row.product,row.keywords,row.status,outcomeText(statusFor(row))].join(" ").toLowerCase().includes(q));
       for (const row of filtered) {
-        const archived = String(row.archived || "").toLowerCase() === "true";
-        const done = archived || row.status === "completed";
+        const done = isCompleted(row);
+        const summary = outcomeText(statusFor(row));
         const article = document.createElement("article");
         article.className = "note";
         article.id = "note-" + row.note_id;
@@ -179,10 +240,13 @@
           <div class="title">${escapeHtml(row.title || "(untitled)")}</div>
           <div class="subtitle">${escapeHtml(row.subtitle || "")}</div>
           <div class="row"><span class="status">${done ? "終了" : "進行中"}</span>${String(row.keywords || "").split(",").filter(Boolean).slice(0,5).map(tag=>`<span class="tag">${escapeHtml(tag.trim())}</span>`).join("")}</div>
+          <div class="complete-summary" ${summary ? "" : "hidden"}>${escapeHtml(summary)}</div>
           <div class="actions">
             <a class="button" href="${editorHref(row)}">開く</a>
             <a class="button" href="${duplicateHref(row)}">複製</a>
-            <button type="button" data-delete="${escapeHtml(row.note_id)}">削除</button>
+            <button type="button" data-finish="${escapeHtml(row.note_id)}" ${done ? "hidden" : ""}>終了登録</button>
+            <button type="button" data-reopen="${escapeHtml(row.note_id)}" ${done ? "" : "hidden"}>進行中に戻す</button>
+            <button type="button" class="danger" data-delete="${escapeHtml(row.note_id)}">削除</button>
           </div>`;
         article.addEventListener("click", event => {
           if (event.target.closest("a,button")) return;
@@ -190,10 +254,29 @@
         });
         article.querySelector("[data-delete]").addEventListener("click", async event => {
           event.stopPropagation();
-          if (!confirm("このノートを一覧から削除しますか？Sheets上ではarchived扱いになります。")) return;
-          await post({kind:"note", ...row, note_type:type, archived:true, updated_at:new Date().toISOString()});
-          showToast("削除リクエストを送信しました");
+          if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
+          await post({kind:"note", ...row, note_type:row.note_type || type, archived:true, updated_at:new Date().toISOString()});
+          rows = rows.filter(item => item.note_id !== row.note_id);
+          render();
+          showToast("削除しました");
           setTimeout(loadRows, 1200);
+        });
+        article.querySelector("[data-finish]").addEventListener("click", event => {
+          event.stopPropagation();
+          activeRow = row;
+          const record = statusFor(row);
+          finishedDate.value = record.finished_date || record.finishedDate || today();
+          finishedOutcome.value = record.outcome || "追加検討必要";
+          finishedComment.value = record.comment || "";
+          dialog.showModal();
+        });
+        article.querySelector("[data-reopen]").addEventListener("click", async event => {
+          event.stopPropagation();
+          const updated_at = new Date().toISOString();
+          statuses[row.note_id] = {note_id:row.note_id, status:"ongoing", finished_date:"", outcome:"", comment:"", updated_at};
+          await postStatus(statuses[row.note_id]);
+          render();
+          showToast("進行中に戻しました");
         });
         (done ? closed : ongoing).append(article);
       }
@@ -202,13 +285,42 @@
     }
     function loadRows() {
       jsonp({kind:"notes", include_archived:"1"}, data => {
-        rows = (Array.isArray(data) ? data : []).filter(matchesType);
+        rows = (Array.isArray(data) ? data : []).filter(row => matchesType(row) && String(row.archived || "").toLowerCase() !== "true");
         rows.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+        loadStatuses();
+      });
+    }
+    function loadStatuses() {
+      jsonp({}, data => {
+        statuses = {};
+        for (const row of Array.isArray(data) ? data : []) {
+          if (!row.note_id) continue;
+          statuses[row.note_id] = row;
+        }
         render();
         showToast("Sheetsから読み込みました");
       });
     }
     document.getElementById("reload").addEventListener("click", loadRows);
+    document.getElementById("finish-cancel").addEventListener("click", () => dialog.close());
+    finishForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!activeRow) return;
+      const updated_at = new Date().toISOString();
+      statuses[activeRow.note_id] = {
+        note_id: activeRow.note_id,
+        status: "completed",
+        finished_date: finishedDate.value || today(),
+        outcome: finishedOutcome.value,
+        comment: finishedComment.value.trim(),
+        updated_at
+      };
+      await postStatus(statuses[activeRow.note_id]);
+      activeRow = null;
+      dialog.close();
+      render();
+      showToast("終了登録しました");
+    });
     search.addEventListener("input", render);
     loadRows();
   </script>

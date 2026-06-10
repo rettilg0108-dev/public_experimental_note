@@ -111,7 +111,7 @@
       </section>
       <div class="row">
         <button class="primary" id="saveNote" type="button">Save to Sheets</button>
-        <button id="archiveNote" type="button">アーカイブ</button>
+        <button id="archiveNote" class="danger" type="button">削除/アーカイブ</button>
       </div>
     </main>
   </div>
@@ -225,9 +225,39 @@
         msg(duplicate ? "複製元を読み込みました" : "読み込みました");
       });
     }
+    function isCurrentTypeNoteRow(row, id){
+      if (!row || String(row.note_id) !== String(id)) return false;
+      if (String(row.note_type || "").toLowerCase() === type) return true;
+      const haystack = [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
+      if (type === "cell") return /cell|細胞|culture|培養|assay|well|plate/.test(haystack);
+      return /animal|動物|mouse|マウス|rat|ラット|in vivo|投与|倫理/.test(haystack);
+    }
+    function listHref(id){
+      return "../category_notes.html?type=" + encodeURIComponent(type) + (id ? "#note-" + encodeURIComponent(id) : "");
+    }
     function verifySaved(id, token, attempt=1){
       jsonp({kind:"edit", note_id:id}, rec => {
-        if (rec?.payload?._save_token === token) { setEditor(rec.payload); msg("保存確認OK: Sheetsから読み直しました"); return; }
+        if (rec?.payload?._save_token === token) {
+          jsonp({kind:"notes", include_archived:"1"}, notes => {
+            const noteRow = (Array.isArray(notes) ? notes : []).find(row => isCurrentTypeNoteRow(row, id));
+            if (noteRow) {
+              setEditor(rec.payload);
+              msg("保存確認OK: 本文と一覧への登録を確認しました。");
+              const link = document.createElement("a");
+              link.href = listHref(id);
+              link.textContent = "一覧へ";
+              q("#msg").append(" ", link);
+              return;
+            }
+            if (attempt < 6) {
+              msg("本文保存OK。一覧登録の反映待ち... " + attempt + "/6");
+              setTimeout(()=>verifySaved(id, token, attempt + 1), 1600);
+              return;
+            }
+            msg("本文は保存されましたが、一覧への登録を確認できません。Apps Scriptの最新版デプロイとNotesシートのnote_type列を確認してください。");
+          });
+          return;
+        }
         if (attempt < 6) { msg("保存反映待ち... " + attempt + "/6"); setTimeout(()=>verifySaved(id, token, attempt + 1), 1600); return; }
         msg("保存確認NG: Apps Script URL/デプロイ先/Sheetを確認してください。");
       });
@@ -253,7 +283,16 @@
     q("#profileTitle").textContent = cfg.profileTitle;
     q("#conditionTitle").textContent = cfg.conditionTitle;
     q("#saveNote").onclick = () => saveCurrent().catch(error => msg(error.message));
-    q("#archiveNote").onclick = async () => { const data=collect(); await post({kind:"note", ...data, note_type:type, archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
+    q("#archiveNote").onclick = async () => {
+      if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
+      const data=collect();
+      await post({kind:"note", ...data, note_type:type, archived:true, updated_at:new Date().toISOString()});
+      msg("削除/アーカイブしました。");
+      const link = document.createElement("a");
+      link.href = listHref(data.note_id);
+      link.textContent = "一覧へ";
+      q("#msg").append(" ", link);
+    };
     q("#addProfile").onclick = () => renderRows(q("#profileTable"), [...readRows(q("#profileTable"),["item","value","note"]), {item:"",value:"",note:""}], ["item","value","note"]);
     q("#addCondition").onclick = () => renderRows(q("#conditionTable"), [...readRows(q("#conditionTable"),["condition","sample","treatment","dose","time","note"]), {condition:"",sample:"",treatment:"",dose:"",time:"",note:""}], ["condition","sample","treatment","dose","time","note"]);
     q("#addEvent").onclick = () => renderEvents([...readEvents(), {date:localDateString(), kind:"", time:"", text:""}]);

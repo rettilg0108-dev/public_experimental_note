@@ -149,7 +149,7 @@
 
         <div class="row">
           <button class="primary" id="saveNote" type="button">Save to Sheets</button>
-          <button id="archiveNote" type="button">アーカイブ</button>
+          <button id="archiveNote" type="button">削除/アーカイブ</button>
         </div>
       </main>
     </div>
@@ -448,6 +448,7 @@
     }
     q("#saveNote").onclick=()=>saveCurrent().catch(e=>msg(e.message));
     q("#archiveNote").onclick=async()=>{
+      if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
       const button = q("#archiveNote");
       const oldText = button.textContent;
       button.disabled = true;
@@ -455,7 +456,7 @@
       try {
         const data=collect();
         await post({kind:"note", ...data, note_type:"synthesis", archived:true, updated_at:new Date().toISOString()});
-        msg("アーカイブしました");
+        msg("削除/アーカイブしました");
         state.currentId="";
         loadNotes();
       } catch(e) {

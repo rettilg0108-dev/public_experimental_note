@@ -596,7 +596,7 @@
       });
       note.querySelector(".delete-button").addEventListener("click", event => {
         event.stopPropagation();
-        if (!confirm("このノートを削除/アーカイブします。よろしいですか？")) return;
+        if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
         markNoteDeleted(row.note_id);
         postNoteArchive(row, true);
         note.remove();
@@ -668,7 +668,7 @@
 
     function deleteNoteCard(note) {
       const id = statusId(note);
-      if (!confirm("このノートを削除/非表示にします。よろしいですか？")) return;
+      if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
       markNoteDeleted(id);
       postNoteArchive({
         note_id: id,
