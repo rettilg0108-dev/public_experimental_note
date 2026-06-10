@@ -81,7 +81,8 @@
         title:"光学分析用実験ノート",
         lead:"吸光、蛍光、光音響、lot/溶媒/測定条件ごとの代表値を管理します。",
         newLabel:"新規光学分析ノート",
-        newHref:"optical_dynamic_note_app/index.html"
+        newHref:"optical_dynamic_note_app/index.html",
+        templateLinks:[{label:"NTR吸収検討テンプレ", href:"optical_dynamic_note_app/index.html?template=ntr_abs_nadph"}]
       },
       cell: {
         title:"細胞実験ノート",
@@ -109,6 +110,13 @@
     document.getElementById("page-lead").textContent = config.lead;
     document.getElementById("new-note").textContent = config.newLabel;
     document.getElementById("new-note").href = config.newHref;
+    for (const link of config.templateLinks || []) {
+      const a = document.createElement("a");
+      a.className = "button";
+      a.href = link.href;
+      a.textContent = link.label;
+      document.querySelector(".tools").append(a);
+    }
     function showToast(text){ toast.textContent=text; toast.classList.add("show"); clearTimeout(timer); timer=setTimeout(()=>toast.classList.remove("show"),1800); }
     function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
     function jsonp(params, cb) {

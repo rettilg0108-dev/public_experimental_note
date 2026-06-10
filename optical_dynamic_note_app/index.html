@@ -164,6 +164,7 @@
     const params = new URLSearchParams(location.search);
     const requestedNoteId = params.get("note_id");
     const duplicateFromId = params.get("duplicate_from");
+    const templateName = params.get("template");
     const state = { currentId:"" };
     const presetDefaults = {
       lot:[],
@@ -216,6 +217,133 @@
         lots:[{lot:"",date:"",state:"",storage:"",note:""}],
         events:[eventBlank()],
         memo:""
+      };
+    }
+    function ntrAbsNadphTemplate(){
+      const date = today();
+      const absBlock = {technique:"abs", instrument:"UV-vis", place:"cuvette holder / 37 ℃", range:"500-1000 nm", interval:"1 nm", repeat:"0, 5, 10, 20, 30, 60 min"};
+      const controlBlock = {...absBlock, place:"cuvette holder"};
+      return {
+        note_type:"optical",
+        note_id:"",
+        date,
+        project:"Nitroreductase response / absorption time course",
+        compoundId:"NTR nitro probe",
+        displayName:"Nitroreductase-responsive nitro dye",
+        mw:"1080.30",
+        storage:"dark, low temperature; DMSO stock",
+        sourceNote:"",
+        keywords:"NTR, NADPH, nitroreductase, absorbance, time course, degas",
+        structureImage:"../assets/optical_notes/ntr_probe_structure.png",
+        links:"Structure image: assets/optical_notes/ntr_probe_structure.png",
+        presets:{
+          ...structuredClone(presetDefaults),
+          lot:["dye stock","NADPH stock","NTR stock","PBS"],
+          solvent:["PBS pH 7.4 / DMSO 1%"],
+          cuvette:["quartz cuvette 1 cm / 2 mL reaction"],
+          temperature:["37 ℃","30 ℃"],
+          degas:["after mixing; Ar/N2 degas","air"]
+        },
+        summaries:[
+          summaryBlank("dye + NADPH + NTR / PBS / 37 ℃"),
+          summaryBlank("dye only control"),
+          summaryBlank("dye + NADPH control"),
+          summaryBlank("dye + NTR control")
+        ],
+        lots:[
+          {lot:"dye stock",date:date,state:"DMSO stock",storage:"dark",note:"Final dye 1 uM. If 1 mM stock, add 2 uL into 2 mL."},
+          {lot:"NADPH stock",date:date,state:"fresh stock",storage:"ice, dark",note:"Final 200 uM. 50 mM stock: 8 uL / 2 mL. 100 mM stock: 4 uL / 2 mL."},
+          {lot:"NTR stock",date:date,state:"E. coli NTR, assumed 3 mg/mL",storage:"aliquot, avoid freeze-thaw",note:"Final 1 ug/mL requires 0.67 uL / 2 mL. Easier: dilute stock 10x and add 6.7 uL, or add 1 uL to make 1.5 ug/mL."},
+          {lot:"PBS",date:date,state:"pH 7.4",storage:"rt",note:"2 mL total reaction volume."}
+        ],
+        events:[
+          {
+            date,
+            title:"Main: dye + NADPH + NTR absorbance time course",
+            mode:"Abs",
+            lot:"dye stock",
+            solvent:"PBS pH 7.4 / DMSO 1%",
+            concentration:"2 mL total; dye 1 uM; DMSO 1% (20 uL total); NADPH 200 uM; NTR 1 ug/mL",
+            cuvette:"quartz cuvette 1 cm / 2 mL reaction",
+            temperature:"37 ℃",
+            enzyme:"Nitroreductase 1 ug/mL",
+            additive:"NADPH 200 uM",
+            degas:"after mixing; Ar/N2 degas",
+            instrumentTemplate:"NTR Abs time course",
+            instrumentRows:[absBlock],
+            notes:"Mix dye, PBS, NADPH, and NTR, then degas the complete reaction mixture. Record absorbance time course at 0, 5, 10, 20, 30, 60 min. If no change under air, prioritize degassed condition. NADPH should be fresh, shielded from light, and kept on ice.",
+            raw:""
+          },
+          {
+            date,
+            title:"Control: dye only",
+            mode:"Abs",
+            lot:"dye stock",
+            solvent:"PBS pH 7.4 / DMSO 1%",
+            concentration:"2 mL total; dye 1 uM; DMSO 1%",
+            cuvette:"quartz cuvette 1 cm / 2 mL reaction",
+            temperature:"37 ℃",
+            enzyme:"-",
+            additive:"-",
+            degas:"air",
+            instrumentTemplate:"Abs control",
+            instrumentRows:[controlBlock],
+            notes:"Baseline stability of dye in PBS/DMSO 1%.",
+            raw:""
+          },
+          {
+            date,
+            title:"Control: dye + NADPH",
+            mode:"Abs",
+            lot:"NADPH stock",
+            solvent:"PBS pH 7.4 / DMSO 1%",
+            concentration:"2 mL total; dye 1 uM; DMSO 1%; NADPH 200 uM",
+            cuvette:"quartz cuvette 1 cm / 2 mL reaction",
+            temperature:"37 ℃",
+            enzyme:"-",
+            additive:"NADPH 200 uM",
+            degas:"air",
+            instrumentTemplate:"Abs control",
+            instrumentRows:[controlBlock],
+            notes:"Check direct NADPH effect/reduction without enzyme.",
+            raw:""
+          },
+          {
+            date,
+            title:"Control: dye + NTR",
+            mode:"Abs",
+            lot:"NTR stock",
+            solvent:"PBS pH 7.4 / DMSO 1%",
+            concentration:"2 mL total; dye 1 uM; DMSO 1%; NTR 1 ug/mL",
+            cuvette:"quartz cuvette 1 cm / 2 mL reaction",
+            temperature:"37 ℃",
+            enzyme:"Nitroreductase 1 ug/mL",
+            additive:"-",
+            degas:"air",
+            instrumentTemplate:"Abs control",
+            instrumentRows:[controlBlock],
+            notes:"Check enzyme-only effect without NADPH.",
+            raw:""
+          },
+          {
+            date,
+            title:"Optional control: dye + NADPH + heat-inactivated NTR",
+            mode:"Abs",
+            lot:"NTR stock",
+            solvent:"PBS pH 7.4 / DMSO 1%",
+            concentration:"2 mL total; dye 1 uM; DMSO 1%; NADPH 200 uM; heat-inactivated NTR 1 ug/mL",
+            cuvette:"quartz cuvette 1 cm / 2 mL reaction",
+            temperature:"37 ℃",
+            enzyme:"heat-inactivated NTR 1 ug/mL",
+            additive:"NADPH 200 uM",
+            degas:"air",
+            instrumentTemplate:"Abs control",
+            instrumentRows:[controlBlock],
+            notes:"Optional control if sample/time allows.",
+            raw:""
+          }
+        ],
+        memo:"Formula: C58H66N5NaO10S2. Exact mass 1079.41, MW 1080.30. Working condition: 2 mL cuvette reaction, dye 1 uM, DMSO 1%, NADPH 200 uM, NTR 1 ug/mL, PBS pH 7.4, 37 ℃, Abs 500-1000 nm time course. Add all components first, then degas. Oxygen may compete for electrons and suppress NTR/NADPH reduction. Avoid old NADPH; keep fresh stock on ice and shield from light."
       };
     }
     function summaryBlank(condition="new condition"){ return {condition, lambda_abs_max:"", lambda_em_max:"", phi_fl:"", pa:"", pa_abs:"", confidence:"tentative", source:""}; }
@@ -582,10 +710,11 @@
       });
     }
     renderEventTemplateOptions();
-    setEditor(blankNote());
     if(requestedNoteId) loadNoteById(requestedNoteId);
     else if(duplicateFromId) loadNoteById(duplicateFromId, true);
-    else if(!endpoint()) msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
+    else if(templateName === "ntr_abs_nadph") setEditor(ntrAbsNadphTemplate());
+    else setEditor(blankNote());
+    if(!endpoint()) msg("Apps Script URL未設定です。Top page の Sheets settings でURLを保存してください。");
   </script>
 </body>
 </html>
