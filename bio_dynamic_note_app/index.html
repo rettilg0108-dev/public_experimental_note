@@ -115,6 +115,21 @@
       </div>
     </main>
   </div>
+  <script src="../shared_note_state.js"></script>
+  <script>
+    window.SharedNoteState = window.SharedNoteState || (() => {
+      const key = "experimental-note-deleted-notes:v1";
+      const hardDeleted = new Set(["2026-06-09-thiophene-lithiation-benzaldehyde"]);
+      const deleteText = "このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？";
+      const loadDeletedNoteIds = () => {
+        try { return new Set([...hardDeleted, ...JSON.parse(localStorage.getItem(key) || "[]")]); }
+        catch { return new Set(hardDeleted); }
+      };
+      const saveDeletedNoteIds = ids => localStorage.setItem(key, JSON.stringify([...ids]));
+      const markNoteDeleted = noteId => { const deleted = loadDeletedNoteIds(); deleted.add(noteId); saveDeletedNoteIds(deleted); };
+      return {DELETE_CONFIRM_TEXT:deleteText, DELETED_NOTES_KEY:key, loadDeletedNoteIds, saveDeletedNoteIds, markNoteDeleted, confirmDeleteArchive:() => confirm(deleteText)};
+    })();
+  </script>
   <script>
     const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const params = new URLSearchParams(location.search);
@@ -284,8 +299,9 @@
     q("#conditionTitle").textContent = cfg.conditionTitle;
     q("#saveNote").onclick = () => saveCurrent().catch(error => msg(error.message));
     q("#archiveNote").onclick = async () => {
-      if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
+      if (!SharedNoteState.confirmDeleteArchive()) return;
       const data=collect();
+      SharedNoteState.markNoteDeleted(data.note_id);
       await post({kind:"note", ...data, note_type:type, archived:true, updated_at:new Date().toISOString()});
       msg("削除/アーカイブしました。");
       const link = document.createElement("a");

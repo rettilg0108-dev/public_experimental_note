@@ -108,6 +108,21 @@
       </div>
     </form>
   </dialog>
+  <script src="shared_note_state.js"></script>
+  <script>
+    window.SharedNoteState = window.SharedNoteState || (() => {
+      const key = "experimental-note-deleted-notes:v1";
+      const hardDeleted = new Set(["2026-06-09-thiophene-lithiation-benzaldehyde"]);
+      const deleteText = "このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？";
+      const loadDeletedNoteIds = () => {
+        try { return new Set([...hardDeleted, ...JSON.parse(localStorage.getItem(key) || "[]")]); }
+        catch { return new Set(hardDeleted); }
+      };
+      const saveDeletedNoteIds = ids => localStorage.setItem(key, JSON.stringify([...ids]));
+      const markNoteDeleted = noteId => { const deleted = loadDeletedNoteIds(); deleted.add(noteId); saveDeletedNoteIds(deleted); };
+      return {DELETE_CONFIRM_TEXT:deleteText, DELETED_NOTES_KEY:key, loadDeletedNoteIds, saveDeletedNoteIds, markNoteDeleted, confirmDeleteArchive:() => confirm(deleteText)};
+    })();
+  </script>
   <script>
     const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
     const params = new URLSearchParams(location.search);
@@ -254,11 +269,13 @@
         });
         article.querySelector("[data-delete]").addEventListener("click", async event => {
           event.stopPropagation();
-          if (!confirm("このノートを削除/アーカイブします。終了登録とは別操作です。よろしいですか？")) return;
-          await post({kind:"note", ...row, note_type:row.note_type || type, archived:true, updated_at:new Date().toISOString()});
+          if (!SharedNoteState.confirmDeleteArchive()) return;
+          SharedNoteState.markNoteDeleted(row.note_id);
           rows = rows.filter(item => item.note_id !== row.note_id);
           render();
           showToast("削除しました");
+          post({kind:"note", ...row, note_type:row.note_type || type, archived:true, updated_at:new Date().toISOString()})
+            .catch(() => showToast("ローカルでは削除済みです。Sheets archive送信は再確認してください。"));
           setTimeout(loadRows, 1200);
         });
         article.querySelector("[data-finish]").addEventListener("click", event => {
@@ -285,7 +302,8 @@
     }
     function loadRows() {
       jsonp({kind:"notes", include_archived:"1"}, data => {
-        rows = (Array.isArray(data) ? data : []).filter(row => matchesType(row) && String(row.archived || "").toLowerCase() !== "true");
+        const deleted = SharedNoteState.loadDeletedNoteIds();
+        rows = (Array.isArray(data) ? data : []).filter(row => matchesType(row) && String(row.archived || "").toLowerCase() !== "true" && !deleted.has(row.note_id));
         rows.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
         loadStatuses();
       });
