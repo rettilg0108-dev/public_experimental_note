@@ -251,6 +251,20 @@
       transition: opacity .15s ease;
     }
     .toast.show { opacity: 1; }
+    .toast.busy::after {
+      content: "";
+      display: block;
+      height: 3px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #8fb8ca, #fff, #8fb8ca);
+      background-size: 200% 100%;
+      animation: syncbar 1s linear infinite;
+    }
+    @keyframes syncbar {
+      from { background-position: 200% 0; }
+      to { background-position: 0 0; }
+    }
     footer {
       margin-top: 18px;
       color: var(--muted);
@@ -444,11 +458,12 @@
     }
 
     let toastTimer = null;
-    function showToast(message) {
+    function showToast(message, busy = false) {
       toast.textContent = message;
+      toast.classList.toggle("busy", busy);
       toast.classList.add("show");
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+      if (!busy) toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
     }
 
     function markNoteDeleted(noteId) {
@@ -513,6 +528,7 @@
     function loadStatusFromSheets() {
       const endpoint = sheetEndpoint();
       if (!endpoint) return;
+      showToast("Sheetsの終了状態を読み込み中...", true);
       const callbackName = "receiveIndexStatus_" + Date.now();
       window[callbackName] = rows => {
         for (const row of rows || []) {
@@ -532,6 +548,7 @@
         saveStatusState();
         notes.forEach(setNoteStatus);
         applySearch();
+        showToast("Sheetsから読み込みました");
         script.remove();
         delete window[callbackName];
       };
@@ -712,6 +729,7 @@
     function loadDynamicNotesFromSheets() {
       const endpoint = sheetEndpoint();
       if (!endpoint) return;
+      showToast("Sheetsからノート一覧を読み込み中...", true);
       const callbackName = "receiveSheetNotes_" + Date.now();
       window[callbackName] = rows => {
         const created = [];
@@ -856,7 +874,7 @@
     }
     search.addEventListener("input", applySearch);
     document.getElementById("load-sheet-status")?.addEventListener("click", () => {
-      showToast("Sheetsを再読込します");
+      showToast("Sheetsを再読込します", true);
       loadDynamicNotesFromSheets();
       loadStatusFromSheets();
     });

@@ -34,11 +34,16 @@
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
     th { background:#f6f8fa; color:var(--muted); font-size:13px; text-align:left; }
-    td input,td select,td textarea { border:0; padding:6px; min-width:92px; }
+    td input,td select,td textarea { border:0; padding:6px; min-width:0; width:100%; overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap; }
+    td textarea { min-height:42px; }
     .event-list { display:grid; gap:10px; }
     .event-card { overflow:hidden; }
     .event-head { display:grid; grid-template-columns:130px 1fr 1fr auto; gap:8px; align-items:end; padding:10px 12px; background:#f6f8fa; border-bottom:1px solid var(--line); }
     .event-body { padding:14px; display:grid; gap:12px; }
+    .sync-status { position:fixed; right:18px; bottom:18px; z-index:40; width:min(360px, calc(100% - 36px)); padding:10px 12px; color:#fff; background:rgba(31,41,51,.95); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; box-shadow:0 8px 24px rgba(20,35,50,.18); }
+    .sync-status.show { opacity:1; }
+    .sync-status.busy::after { content:""; display:block; height:3px; margin-top:8px; border-radius:999px; background:linear-gradient(90deg,#8fb8ca,#fff,#8fb8ca); background-size:200% 100%; animation:syncbar 1s linear infinite; }
+    @keyframes syncbar { from { background-position:200% 0; } to { background-position:0 0; } }
     @media (max-width:820px) {
       .wrap { width:100%; margin:0; }
       header { border-left:0; border-right:0; border-radius:0; padding:22px 18px; }
@@ -115,6 +120,7 @@
       </div>
     </main>
   </div>
+  <div class="sync-status" id="syncStatus" role="status" aria-live="polite"></div>
   <script src="../shared_note_state.js"></script>
   <script>
     window.SharedNoteState = window.SharedNoteState || (() => {
@@ -174,7 +180,20 @@
     function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
     function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
     let msgTimer = null;
-    function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
+    let syncTimer = null;
+    function msg(text){
+      q("#msg").textContent=text;
+      clearTimeout(msgTimer);
+      if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000);
+      const sync=q("#syncStatus");
+      sync.textContent=text || "";
+      sync.classList.toggle("busy", /送信中|読み込み|反映待ち|Saving/.test(text || ""));
+      if(text){
+        sync.classList.add("show");
+        clearTimeout(syncTimer);
+        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),3000);
+      }
+    }
     function post(body){ const url=endpoint(); if(!url) throw new Error("入口でApps Script URLを設定してください"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
     function jsonp(params, cb){
       const url=endpoint(); if(!url){ msg("入口でApps Script URLを設定してください"); return; }
@@ -193,15 +212,16 @@
     function noteTitle(){ return `${cfg.method}: ${q("#experimentTitle").value || "untitled"}`; }
     function noteId(){ return [q("#date").value || localDateString(), type, slug(q("#experimentTitle").value)].join("-") + "-" + Math.random().toString(36).slice(2,5); }
     function renderRows(table, rows, keys){
-      table.querySelector("tbody").innerHTML = (rows||[]).map(row => `<tr>${keys.map(key=>`<td data-label="${escapeAttr(key)}"><input data-key="${escapeAttr(key)}" value="${escapeAttr(row[key])}"></td>`).join("")}<td><button type="button" class="delete-row danger">削除</button></td></tr>`).join("");
+      table.querySelector("tbody").innerHTML = (rows||[]).map(row => `<tr>${keys.map(key=>`<td data-label="${escapeAttr(key)}"><textarea data-key="${escapeAttr(key)}">${escapeText(row[key])}</textarea></td>`).join("")}<td><button type="button" class="delete-row danger">削除</button></td></tr>`).join("");
+      autosizeAll();
     }
     function readRows(table, keys){ return [...table.querySelectorAll("tbody tr")].map(row => Object.fromEntries(keys.map(key => [key, row.querySelector(`[data-key="${key}"]`)?.value || ""]))); }
     function renderEvents(rows){
       q("#eventList").innerHTML = (rows||[]).map(event => `<article class="event-card">
         <div class="event-head">
-          <label>date<input data-event="date" type="date" value="${escapeAttr(event.date)}"></label>
-          <label>event<input data-event="kind" value="${escapeAttr(event.kind)}"></label>
-          <label>time / timepoint<input data-event="time" value="${escapeAttr(event.time)}"></label>
+          <label>日付<input data-event="date" type="date" value="${escapeAttr(event.date)}"></label>
+          <label>event<textarea data-event="kind">${escapeText(event.kind)}</textarea></label>
+          <label>時刻<textarea data-event="time">${escapeText(event.time)}</textarea></label>
           <button type="button" class="delete-event danger">削除</button>
         </div>
         <div class="event-body">
@@ -232,6 +252,7 @@
       autosizeAll();
     }
     function loadNoteById(id, duplicate=false){
+      msg(duplicate ? "複製元を読み込み中..." : "Sheets保存済みノートを読み込み中...");
       jsonp({kind:"edit", note_id:id}, rec => {
         if (!rec?.payload) return msg("指定ノートが見つかりません");
         const payload = {...rec.payload};

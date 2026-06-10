@@ -51,8 +51,13 @@
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
     th { background:#f6f8fa; color:var(--muted); font-size:13px; text-align:left; }
-    td input,td select,td textarea { border:0; padding:6px; min-width:92px; }
+    td input,td select,td textarea { border:0; padding:6px; min-width:0; width:100%; overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap; }
+    td textarea { min-height:42px; }
     .table-scroll { overflow:visible; }
+    .sync-status { position:fixed; right:18px; bottom:18px; z-index:40; width:min(360px, calc(100% - 36px)); padding:10px 12px; color:#fff; background:rgba(31,41,51,.95); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; box-shadow:0 8px 24px rgba(20,35,50,.18); }
+    .sync-status.show { opacity:1; }
+    .sync-status.busy::after { content:""; display:block; height:3px; margin-top:8px; border-radius:999px; background:linear-gradient(90deg,#8fb8ca,#fff,#8fb8ca); background-size:200% 100%; animation:syncbar 1s linear infinite; }
+    @keyframes syncbar { from { background-position:200% 0; } to { background-position:0 0; } }
     @media (max-width:820px) {
       .wrap { width:100%; margin:0; }
       header { border-left:0; border-right:0; border-radius:0; padding:22px 18px; }
@@ -126,7 +131,7 @@
       </section>
 
       <section>
-        <h3>lot / stock</h3>
+        <h3>色素 lot / stock</h3>
         <div class="table-scroll">
           <table id="lotTable">
             <thead><tr><th>lot</th><th>date</th><th>state</th><th>storage</th><th>note</th><th></th></tr></thead>
@@ -134,6 +139,17 @@
           </table>
         </div>
         <div class="actions"><button type="button" id="addLot">lot行を追加</button></div>
+      </section>
+
+      <section>
+        <h3>反応試薬 stock / buffer</h3>
+        <div class="table-scroll">
+          <table id="reagentStockTable">
+            <thead><tr><th>reagent</th><th>stock / concentration</th><th>storage</th><th>use / note</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="actions"><button type="button" id="addReagentStock">試薬stock行を追加</button></div>
       </section>
 
       <section>
@@ -157,6 +173,7 @@
     </main>
   </div>
 
+  <div class="sync-status" id="syncStatus" role="status" aria-live="polite"></div>
   <script src="../shared_note_state.js"></script>
   <script>
     window.SharedNoteState = window.SharedNoteState || (() => {
@@ -204,7 +221,20 @@
       "enzyme/addition response": {builtin:true, techniques:["abs","fl"], enzyme:"", additive:""}
     };
     let msgTimer = null;
-    function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
+    let syncTimer = null;
+    function msg(text){
+      q("#msg").textContent=text;
+      clearTimeout(msgTimer);
+      if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000);
+      const sync=q("#syncStatus");
+      sync.textContent=text || "";
+      sync.classList.toggle("busy", /送信中|読み込み|反映待ち|Saving/.test(text || ""));
+      if(text){
+        sync.classList.add("show");
+        clearTimeout(syncTimer);
+        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),3000);
+      }
+    }
     function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
     function localDateString(date = new Date()){
       const yyyy = date.getFullYear();
@@ -230,6 +260,7 @@
         presets:structuredClone(presetDefaults),
         summaries:[summaryBlank("PBS, 5 uM, 25 ℃"), summaryBlank("water, 5 uM, 25 ℃")],
         lots:[{lot:"",date:"",state:"",storage:"",note:""}],
+        reagentStocks:[{reagent:"",stock:"",storage:"",note:""}],
         events:[eventBlank()],
         memo:""
       };
@@ -253,7 +284,7 @@
         links:"Structure image: assets/optical_notes/ntr_probe_structure.png",
         presets:{
           ...structuredClone(presetDefaults),
-          lot:["dye stock","NADPH stock","NTR stock","PBS"],
+          lot:["dye stock"],
           solvent:["PBS pH 7.4 / DMSO 1%"],
           cuvette:["quartz cuvette 1 cm / 2 mL reaction"],
           temperature:["37 ℃","30 ℃"],
@@ -266,10 +297,12 @@
           summaryBlank("dye + NTR control")
         ],
         lots:[
-          {lot:"dye stock",date:date,state:"DMSO stock",storage:"dark",note:"Final dye 1 uM. If 1 mM stock, add 2 uL into 2 mL."},
-          {lot:"NADPH stock",date:date,state:"fresh stock",storage:"ice, dark",note:"Final 200 uM. 50 mM stock: 8 uL / 2 mL. 100 mM stock: 4 uL / 2 mL."},
-          {lot:"NTR stock",date:date,state:"E. coli NTR, assumed 3 mg/mL",storage:"aliquot, avoid freeze-thaw",note:"Final 1 ug/mL requires 0.67 uL / 2 mL. Easier: dilute stock 10x and add 6.7 uL, or add 1 uL to make 1.5 ug/mL."},
-          {lot:"PBS",date:date,state:"pH 7.4",storage:"rt",note:"2 mL total reaction volume."}
+          {lot:"dye stock",date:date,state:"DMSO stock",storage:"dark",note:"Final dye 1 uM. If 1 mM stock, add 2 uL into 2 mL."}
+        ],
+        reagentStocks:[
+          {reagent:"NADPH",stock:"50 mM or 100 mM fresh stock",storage:"ice, dark",note:"Final 200 uM. 50 mM stock: 8 uL / 2 mL. 100 mM stock: 4 uL / 2 mL."},
+          {reagent:"Nitroreductase",stock:"E. coli NTR, assumed 3 mg/mL",storage:"aliquot, avoid freeze-thaw",note:"Final 1 ug/mL requires 0.67 uL / 2 mL. Easier: dilute stock 10x and add 6.7 uL, or add 1 uL to make 1.5 ug/mL."},
+          {reagent:"PBS",stock:"pH 7.4",storage:"rt",note:"2 mL total reaction volume."}
         ],
         events:[
           {
@@ -455,21 +488,33 @@
     function readSummaries(){ return [...q("#summaryGrid").querySelectorAll(".summary-card")].map(card=>Object.fromEntries([...card.querySelectorAll("[data-sum]")].map(el=>[el.dataset.sum,el.value]))); }
     function renderLots(rows){
       q("#lotTable tbody").innerHTML=(rows||[]).map(r=>`<tr>
-        <td data-label="lot"><input data-lot="lot" value="${escapeAttr(r.lot || "")}"></td>
+        <td data-label="lot"><textarea data-lot="lot">${escapeText(r.lot || "")}</textarea></td>
         <td data-label="date"><input data-lot="date" value="${escapeAttr(r.date || r.prepared || "")}"></td>
-        <td data-label="state"><input data-lot="state" value="${escapeAttr(r.state || "")}"></td>
-        <td data-label="storage"><input data-lot="storage" value="${escapeAttr(r.storage || "")}"></td>
-        <td data-label="note"><input data-lot="note" value="${escapeAttr(r.note || "")}"></td>
+        <td data-label="state"><textarea data-lot="state">${escapeText(r.state || "")}</textarea></td>
+        <td data-label="storage"><textarea data-lot="storage">${escapeText(r.storage || "")}</textarea></td>
+        <td data-label="note"><textarea data-lot="note">${escapeText(r.note || "")}</textarea></td>
         <td data-label=""><button type="button" class="delete-row danger">削除</button></td>
       </tr>`).join("");
+      autosizeAll();
     }
     function readLots(){ return [...q("#lotTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-lot]")].map(el=>[el.dataset.lot,el.value]))); }
+    function renderReagentStocks(rows){
+      q("#reagentStockTable tbody").innerHTML=(rows||[]).map(r=>`<tr>
+        <td data-label="reagent"><textarea data-stock="reagent">${escapeText(r.reagent || "")}</textarea></td>
+        <td data-label="stock / concentration"><textarea data-stock="stock">${escapeText(r.stock || "")}</textarea></td>
+        <td data-label="storage"><textarea data-stock="storage">${escapeText(r.storage || "")}</textarea></td>
+        <td data-label="use / note"><textarea data-stock="note">${escapeText(r.note || "")}</textarea></td>
+        <td data-label=""><button type="button" class="delete-row danger">削除</button></td>
+      </tr>`).join("");
+      autosizeAll();
+    }
+    function readReagentStocks(){ return [...q("#reagentStockTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-stock]")].map(el=>[el.dataset.stock,el.value]))); }
     function renderEvents(rows){
       q("#eventList").innerHTML=(rows||[]).map(r=>`<article class="event-card">
         <div class="event-head">
-          <label class="date-field">date<input data-event="date" type="date" value="${escapeAttr(r.date)}"></label>
-          <label>sheet title / purpose<input data-event="title" value="${escapeAttr(r.title)}"></label>
-          <label>measurement<input data-event="mode" value="${escapeAttr(r.mode)}"></label>
+          <label class="date-field">日付<input data-event="date" type="date" value="${escapeAttr(r.date)}"></label>
+          <label>sheet title / purpose<textarea data-event="title">${escapeText(r.title)}</textarea></label>
+          <label>measurement<textarea data-event="mode">${escapeText(r.mode)}</textarea></label>
           <button type="button" class="delete-event danger">削除</button>
         </div>
         <div class="event-body">
@@ -477,11 +522,11 @@
           <div class="mini-grid">
             <label>lot<select data-event="lot" data-preset="lot"></select></label>
             <label>solvent / buffer<select data-event="solvent" data-preset="solvent"></select></label>
-            <label>final concentration<input data-event="concentration" value="${escapeAttr(r.concentration)}"></label>
+            <label>final concentration<textarea data-event="concentration">${escapeText(r.concentration)}</textarea></label>
             <label>cuvette<select data-event="cuvette" data-preset="cuvette"></select></label>
             <label>temperature<select data-event="temperature" data-preset="temperature"></select></label>
-            <label>enzyme<input data-event="enzyme" value="${escapeAttr(r.enzyme)}"></label>
-            <label>reaction molecule/additive<input data-event="additive" value="${escapeAttr(r.additive)}"></label>
+            <label>enzyme<textarea data-event="enzyme">${escapeText(r.enzyme)}</textarea></label>
+            <label>reaction molecule/additive<textarea data-event="additive">${escapeText(r.additive)}</textarea></label>
             <label>degas<select data-event="degas" data-preset="degas"></select></label>
           </div>
           <details open>
@@ -522,7 +567,7 @@
             <button type="button" class="delete-inst-row danger">削除</button>
           </div>
           <div class="mini-grid">
-            ${spec.fields.map(([key, label])=>`<label>${label}<input data-inst="${key}" value="${escapeAttr(block[key])}"></label>`).join("")}
+            ${spec.fields.map(([key, label])=>`<label>${label}<textarea data-inst="${key}">${escapeText(block[key])}</textarea></label>`).join("")}
           </div>
         </article>`;
       }).join("");
@@ -535,7 +580,7 @@
       });
     }
     function collect(){
-      const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, structureImage:q("#structurePreview").hidden ? "" : q("#structurePreview").src, links:q("#links").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), events:readEvents(), memo:q("#memo").value};
+      const data={note_type:"optical", note_id:state.currentId||noteId(), date:q("#date").value, project:q("#project").value, compoundId:q("#compoundId").value, displayName:q("#displayName").value, mw:q("#mw").value, storage:q("#storage").value, sourceNote:q("#sourceNote").value, keywords:q("#keywords").value, structureImage:q("#structurePreview").hidden ? "" : q("#structurePreview").src, links:q("#links").value, presets:readPresets(), summaries:readSummaries(), lots:readLots(), reagentStocks:readReagentStocks(), events:readEvents(), memo:q("#memo").value};
       data.title=noteTitle();
       const range = measurementDateRange(data.events);
       data.measurementStart = range.start;
@@ -577,11 +622,13 @@
       renderOptions(note.presets);
       renderSummaries(note.summaries);
       renderLots(note.lots);
+      renderReagentStocks(note.reagentStocks || note.reagents || []);
       renderEvents(note.events);
       autosizeAll();
     }
     function asDuplicate(data){ return {...data, note_id:"", date:today(), status:"ongoing"}; }
     function loadNoteById(id, duplicate=false, options={}){
+      msg(duplicate ? "複製元を読み込み中..." : "Sheets保存済みノートを読み込み中...");
       jsonp({kind:"edit", note_id:id}, rec=>{
         if(rec?.payload) {
           if(options.expectSaved && options.saveToken && rec.payload._save_token !== options.saveToken) {
@@ -668,6 +715,7 @@
     };
     q("#addSummary").onclick=()=>{ const rows=readSummaries(); rows.push(summaryBlank()); renderSummaries(rows); };
     q("#addLot").onclick=()=>{ const rows=readLots(); rows.push({lot:"",date:"",state:"",storage:"",note:""}); renderLots(rows); renderOptions(readPresets()); };
+    q("#addReagentStock").onclick=()=>{ const rows=readReagentStocks(); rows.push({reagent:"",stock:"",storage:"",note:""}); renderReagentStocks(rows); };
     q("#addEvent").onclick=()=>{ const rows=readEvents(); rows.push(eventBlank()); renderEvents(rows); };
     q("#duplicateEvent").onclick=()=>{ const rows=readEvents(); rows.push({...rows.at(-1), title:(rows.at(-1)?.title || "event")+" copy"}); renderEvents(rows); };
     q("#saveEventTemplate").onclick=()=>{

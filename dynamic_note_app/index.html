@@ -43,9 +43,14 @@
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
     th { background:#f6f8fa; color:var(--muted); font-size:13px; text-align:left; }
-    td input,td select { border:0; padding:6px; min-width:92px; }
+    td input,td select,td textarea { border:0; padding:6px; min-width:0; width:100%; overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap; }
+    td textarea { min-height:42px; }
     .num { text-align:right; font-variant-numeric:tabular-nums; }
     .table-scroll { overflow:visible; }
+    .sync-status { position:fixed; right:18px; bottom:18px; z-index:40; width:min(360px, calc(100% - 36px)); padding:10px 12px; color:#fff; background:rgba(31,41,51,.95); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; box-shadow:0 8px 24px rgba(20,35,50,.18); }
+    .sync-status.show { opacity:1; }
+    .sync-status.busy::after { content:""; display:block; height:3px; margin-top:8px; border-radius:999px; background:linear-gradient(90deg,#8fb8ca,#fff,#8fb8ca); background-size:200% 100%; animation:syncbar 1s linear infinite; }
+    @keyframes syncbar { from { background-position:200% 0; } to { background-position:0 0; } }
     @media (max-width:800px) {
       .wrap { width:100%; margin:0; }
       header { border-left:0; border-right:0; border-radius:0; padding:22px 18px; }
@@ -155,6 +160,7 @@
     </div>
   </div>
 
+  <div class="sync-status" id="syncStatus" role="status" aria-live="polite"></div>
   <script src="../shared_note_state.js"></script>
   <script>
     window.SharedNoteState = window.SharedNoteState || (() => {
@@ -175,10 +181,19 @@
     const DUPLICATE_DRAFT_KEY = "experimental-note-duplicate-draft:v1";
     const q = s => document.querySelector(s);
     let msgTimer = null;
+    let syncTimer = null;
     const msg = text => {
       q("#msg").textContent = text;
       clearTimeout(msgTimer);
       if (text) msgTimer = setTimeout(() => { q("#msg").textContent = ""; }, 5000);
+      const sync = q("#syncStatus");
+      sync.textContent = text || "";
+      sync.classList.toggle("busy", /送信中|読み込み|反映待ち|Saving/.test(text || ""));
+      if(text) {
+        sync.classList.add("show");
+        clearTimeout(syncTimer);
+        if(!sync.classList.contains("busy")) syncTimer = setTimeout(() => sync.classList.remove("show"), 3000);
+      }
     };
     const state = { notes: [], currentId: "" };
     const params = new URLSearchParams(location.search);
@@ -312,6 +327,7 @@
     }
     function loadNoteById(noteId, options = {}) {
       if (!noteId) return;
+      msg("Sheets保存済みノートを読み込み中...");
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
           if (rec.payload.note_type === "optical") {
@@ -352,6 +368,7 @@
     }
     function duplicateNoteById(noteId) {
       if (!noteId) return;
+      msg("複製元を読み込み中...");
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
           if (rec.payload.note_type === "optical") {
@@ -366,6 +383,7 @@
       });
     }
     function loadNotes(){
+      msg("ノート一覧を読み込み中...");
       jsonp({kind:"notes"}, rows=>{
         state.notes=rows||[];
         msg("ノート一覧を読み込みました");
@@ -401,21 +419,22 @@
     }
     function renderReagents(rows){
       q("#reagentTable tbody").innerHTML = rows.map((r,i)=>`<tr>
-        <td data-label="名称"><input data-k="name" value="${escapeAttr(r.name||"")}"></td>
-        <td data-label="役割"><input data-k="role" value="${escapeAttr(r.role||"")}"></td>
+        <td data-label="名称"><textarea data-k="name">${escapeText(r.name||"")}</textarea></td>
+        <td data-label="役割"><textarea data-k="role">${escapeText(r.role||"")}</textarea></td>
         <td data-label="MW"><input data-k="mw" type="number" step="0.01" value="${escapeAttr(r.mw||"")}"></td>
         <td data-label="eq/mol%"><input data-k="eq" type="number" step="0.001" value="${escapeAttr(r.eq||"")}"></td>
         <td data-label="単位"><select data-k="unit"><option value="eq" ${r.unit!=="mol%"?"selected":""}>eq</option><option value="mol%" ${r.unit==="mol%"?"selected":""}>mol%</option></select></td>
         <td data-label="密度 g/mL"><input data-k="density" type="number" step="0.001" value="${escapeAttr(r.density||"")}"></td>
         <td data-label="mmol" class="num mmol"></td><td data-label="秤量/容量" class="num amount"></td><td data-label=""><button type="button" data-del="${i}">削除</button></td>
       </tr>`).join("");
+      autosizeAll();
     }
     function readReagents(){ return [...q("#reagentTable tbody").rows].map(row=>Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el=>[el.dataset.k,el.value]))); }
     function renderOperations(rows){
       q("#operationTable tbody").innerHTML = rows.map((r,i)=>`<tr>
         <td data-label="日付"><input data-op="date" type="date" value="${escapeAttr(r.date||"")}"></td>
         <td data-label="時刻"><input data-op="time" type="time" value="${escapeAttr(r.time||"")}"></td>
-        <td data-label="操作"><textarea data-op="text" placeholder="操作内容">${escapeAttr(r.text||"")}</textarea></td>
+        <td data-label="操作"><textarea data-op="text" placeholder="操作内容">${escapeText(r.text||"")}</textarea></td>
         <td data-label=""><button type="button" data-op-del="${i}">削除</button></td>
       </tr>`).join("");
       autosizeAll();
@@ -434,6 +453,7 @@
     }
     function renderImages(images){ q("#images").innerHTML=images.map(src=>`<img src="${src}" alt="">`).join(""); }
     function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
+    function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
     async function addFiles(files, target){
       for(const file of files){
         if(!file.type.startsWith("image/")) continue;

@@ -46,6 +46,10 @@
     .dialog-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
     .toast { position:fixed; left:50%; bottom:18px; z-index:30; transform:translateX(-50%); padding:9px 12px; color:#fff; background:rgba(31,41,51,.94); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; }
     .toast.show { opacity:1; }
+    .sync-status { position:fixed; right:18px; bottom:18px; z-index:40; width:min(360px, calc(100% - 36px)); padding:10px 12px; color:#fff; background:rgba(31,41,51,.95); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; box-shadow:0 8px 24px rgba(20,35,50,.18); }
+    .sync-status.show { opacity:1; }
+    .sync-status.busy::after { content:""; display:block; height:3px; margin-top:8px; border-radius:999px; background:linear-gradient(90deg,#8fb8ca,#fff,#8fb8ca); background-size:200% 100%; animation:syncbar 1s linear infinite; }
+    @keyframes syncbar { from { background-position:200% 0; } to { background-position:0 0; } }
     footer { margin-top:18px; color:var(--muted); font-size:12px; }
     @media (max-width:640px) {
       .wrap { width:100%; margin:0; }
@@ -67,7 +71,7 @@
       <a class="button" href="index.html">入口</a>
       <input id="search" type="search" placeholder="Search by date, title, keyword..." aria-label="Search notes">
       <button type="button" id="reload">Sheets再読込</button>
-      <a class="button primary" id="new-note" href="#">新規ノート</a>
+      <a class="button" id="new-note" href="#">新規ノート</a>
     </div>
     <section class="section">
       <h2>進行中</h2>
@@ -82,6 +86,7 @@
     <footer>noindex / nofollow</footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sync-status" id="syncStatus" role="status" aria-live="polite"></div>
   <dialog id="finish-dialog">
     <form method="dialog" class="dialog-body" id="finish-form">
       <p class="dialog-title">実験を終了登録</p>
@@ -131,20 +136,19 @@
       optical: {
         title:"光学分析用実験ノート",
         lead:"吸光、蛍光、光音響、lot/溶媒/測定条件ごとの代表値を管理します。",
-        newLabel:"新規光学分析ノート",
-        newHref:"optical_dynamic_note_app/index.html",
-        templateLinks:[{label:"NTR吸収検討テンプレ", href:"optical_dynamic_note_app/index.html?template=ntr_abs_nadph"}]
+        newLabel:"新規ノート",
+        newHref:"optical_dynamic_note_app/index.html"
       },
       cell: {
         title:"細胞実験ノート",
         lead:"細胞種、培養条件、処理条件、測定イベント、結果解釈を管理します。",
-        newLabel:"新規細胞実験ノート",
+        newLabel:"新規ノート",
         newHref:"bio_dynamic_note_app/index.html?type=cell"
       },
       animal: {
         title:"動物実験ノート",
         lead:"倫理番号、群・個体、投与条件、観察イベント、結果解釈を管理します。",
-        newLabel:"新規動物実験ノート",
+        newLabel:"新規ノート",
         newHref:"bio_dynamic_note_app/index.html?type=animal"
       }
     };
@@ -154,6 +158,7 @@
     const closed = document.getElementById("closed");
     const search = document.getElementById("search");
     const toast = document.getElementById("toast");
+    const syncStatus = document.getElementById("syncStatus");
     const dialog = document.getElementById("finish-dialog");
     const finishForm = document.getElementById("finish-form");
     const finishedDate = document.getElementById("finished-date");
@@ -176,6 +181,13 @@
       document.querySelector(".tools").append(a);
     }
     function showToast(text){ toast.textContent=text; toast.classList.add("show"); clearTimeout(timer); timer=setTimeout(()=>toast.classList.remove("show"),1800); }
+    function showSync(text, busy=false){
+      syncStatus.textContent=text;
+      syncStatus.classList.toggle("busy", busy);
+      syncStatus.classList.add("show");
+      clearTimeout(syncStatus._timer);
+      if(!busy) syncStatus._timer=setTimeout(()=>syncStatus.classList.remove("show"),2600);
+    }
     function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
     function today(){
       const now = new Date();
@@ -194,15 +206,15 @@
     }
     function jsonp(params, cb) {
       const url = endpoint();
-      if (!url) { showToast("入口でApps Script URLを設定してください"); return; }
+      if (!url) { showToast("入口でApps Script URLを設定してください"); showSync("入口でApps Script URLを設定してください"); return; }
       const name = "categoryCb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
       const script = document.createElement("script");
       let done = false;
       window[name] = data => { done = true; cb(data); script.remove(); delete window[name]; };
-      script.onerror = () => { done = true; showToast("Sheets読込失敗"); delete window[name]; };
+      script.onerror = () => { done = true; showToast("Sheets読込失敗"); showSync("Sheets読込失敗"); delete window[name]; };
       script.src = url + "?" + new URLSearchParams({...params, callback:name, _:Date.now()}).toString();
       document.body.append(script);
-      setTimeout(() => { if (done) return; showToast("Sheets読込タイムアウト"); script.remove(); delete window[name]; }, 9000);
+      setTimeout(() => { if (done) return; showToast("Sheets読込タイムアウト"); showSync("Sheets読込タイムアウト"); script.remove(); delete window[name]; }, 9000);
     }
     async function post(body) {
       const url = endpoint();
@@ -220,24 +232,9 @@
       if (type === "optical") return "optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
       return "bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&duplicate_from=" + encodeURIComponent(row.note_id);
     }
-    function rowText(row) {
-      return [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
-    }
-    function inferredType(row) {
-      const haystack = rowText(row);
-      if (/\boptical\b|光学|abs|fluorescence|蛍光|photoacoustic|ntr|nadph/.test(haystack)) return "optical";
-      if (/cell|細胞|culture|培養|assay|well|plate/.test(haystack)) return "cell";
-      if (/animal|動物|mouse|マウス|rat|ラット|in vivo|投与|倫理/.test(haystack)) return "animal";
-      return String(row.note_type || "").trim().toLowerCase() || "synthesis";
-    }
     function matchesType(row) {
       const explicit = String(row.note_type || "").trim().toLowerCase();
-      if (explicit === type) return true;
-      const haystack = [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
-      if (type === "optical" && /\boptical\b|光学|abs|fluorescence|蛍光|photoacoustic|ntr|nadph/.test(haystack)) return true;
-      if (type === "cell" && /cell|細胞|culture|培養|assay|well|plate/.test(haystack)) return true;
-      if (type === "animal" && /animal|動物|mouse|マウス|rat|ラット|in vivo|投与|倫理/.test(haystack)) return true;
-      return !explicit && inferredType(row) === type;
+      return explicit === type;
     }
     function render() {
       const q = search.value.trim().toLowerCase();
@@ -301,6 +298,7 @@
       document.getElementById("closed-empty").hidden = Boolean(closed.children.length);
     }
     function loadRows() {
+      showSync("Sheetsからノート一覧を読み込み中...", true);
       jsonp({kind:"notes", include_archived:"1"}, data => {
         const deleted = SharedNoteState.loadDeletedNoteIds();
         rows = (Array.isArray(data) ? data : []).filter(row => matchesType(row) && String(row.archived || "").toLowerCase() !== "true" && !deleted.has(row.note_id));
@@ -317,6 +315,7 @@
         }
         render();
         showToast("Sheetsから読み込みました");
+        showSync("Sheetsから読み込みました");
       });
     }
     document.getElementById("reload").addEventListener("click", loadRows);
