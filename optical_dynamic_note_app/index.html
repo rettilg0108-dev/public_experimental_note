@@ -579,12 +579,37 @@
         else msg("指定ノートが見つかりません");
       });
     }
+    function isOpticalNoteRow(row, id){
+      if (!row || String(row.note_id) !== String(id)) return false;
+      if (String(row.note_type || "").toLowerCase() === "optical") return true;
+      const haystack = [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
+      return /\boptical\b|光学|abs|fluorescence|蛍光|photoacoustic|ntr|nadph/.test(haystack);
+    }
+    function listHref(id){
+      return "../category_notes.html?type=optical" + (id ? "#note-" + encodeURIComponent(id) : "");
+    }
     function verifySaved(id, saveToken, attempt=1){
       jsonp({kind:"edit", note_id:id}, rec=>{
         const payload = rec?.payload;
         if(payload?._save_token === saveToken) {
-          setEditor(payload);
-          msg("保存確認OK: Sheets保存済みノートを読み込みました。");
+          jsonp({kind:"notes", include_archived:"1"}, notes=>{
+            const noteRow = (Array.isArray(notes) ? notes : []).find(row => isOpticalNoteRow(row, id));
+            if (noteRow) {
+              setEditor(payload);
+              msg("保存確認OK: 本文と光学一覧への登録を確認しました。");
+              const link = document.createElement("a");
+              link.href = listHref(id);
+              link.textContent = "光学一覧へ";
+              q("#msg").append(" ", link);
+              return;
+            }
+            if(attempt < 6) {
+              msg("本文保存OK。一覧登録の反映待ち... " + attempt + "/6");
+              setTimeout(()=>verifySaved(id, saveToken, attempt + 1), 1800);
+              return;
+            }
+            msg("本文は保存されましたが、光学一覧への登録を確認できません。Apps Scriptの最新版デプロイとNotesシートのnote_type列を確認してください。");
+          });
           return;
         }
         if(attempt < 6) {

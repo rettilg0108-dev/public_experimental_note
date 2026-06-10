@@ -144,6 +144,25 @@
       if (type === "optical") return "optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
       return "bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&duplicate_from=" + encodeURIComponent(row.note_id);
     }
+    function rowText(row) {
+      return [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
+    }
+    function inferredType(row) {
+      const haystack = rowText(row);
+      if (/\boptical\b|光学|abs|fluorescence|蛍光|photoacoustic|ntr|nadph/.test(haystack)) return "optical";
+      if (/cell|細胞|culture|培養|assay|well|plate/.test(haystack)) return "cell";
+      if (/animal|動物|mouse|マウス|rat|ラット|in vivo|投与|倫理/.test(haystack)) return "animal";
+      return String(row.note_type || "").trim().toLowerCase() || "synthesis";
+    }
+    function matchesType(row) {
+      const explicit = String(row.note_type || "").trim().toLowerCase();
+      if (explicit === type) return true;
+      const haystack = [row.title, row.subtitle, row.method, row.product, row.keywords].join(" ").toLowerCase();
+      if (type === "optical" && /\boptical\b|光学|abs|fluorescence|蛍光|photoacoustic|ntr|nadph/.test(haystack)) return true;
+      if (type === "cell" && /cell|細胞|culture|培養|assay|well|plate/.test(haystack)) return true;
+      if (type === "animal" && /animal|動物|mouse|マウス|rat|ラット|in vivo|投与|倫理/.test(haystack)) return true;
+      return !explicit && inferredType(row) === type;
+    }
     function render() {
       const q = search.value.trim().toLowerCase();
       ongoing.innerHTML = "";
@@ -154,6 +173,7 @@
         const done = archived || row.status === "completed";
         const article = document.createElement("article");
         article.className = "note";
+        article.id = "note-" + row.note_id;
         article.innerHTML = `
           <div class="date">${escapeHtml(row.date || "")}</div>
           <div class="title">${escapeHtml(row.title || "(untitled)")}</div>
@@ -182,7 +202,7 @@
     }
     function loadRows() {
       jsonp({kind:"notes", include_archived:"1"}, data => {
-        rows = (Array.isArray(data) ? data : []).filter(row => row.note_type === type);
+        rows = (Array.isArray(data) ? data : []).filter(matchesType);
         rows.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
         render();
         showToast("Sheetsから読み込みました");
