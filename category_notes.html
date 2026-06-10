@@ -233,8 +233,7 @@
       return "bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&duplicate_from=" + encodeURIComponent(row.note_id);
     }
     function matchesType(row) {
-      const explicit = String(row.note_type || "").trim().toLowerCase();
-      return explicit === type;
+      return String(row.note_type || "").trim().toLowerCase() === type;
     }
     function render() {
       const q = search.value.trim().toLowerCase();

@@ -1,6 +1,6 @@
 const APP_NAME = 'Experimental Notes Sheets API';
-const APP_VERSION = '2026-06-09-v7-archive-sync';
-const APP_UPDATED_AT = '2026-06-09T17:15:00+09:00';
+const APP_VERSION = '2026-06-10-v8-note-type-repair';
+const APP_UPDATED_AT = '2026-06-10T19:55:00+09:00';
 const NOTES_SHEET = 'Notes';
 const EDITS_SHEET = 'Edits';
 const STATUS_SHEET = 'Status';
@@ -148,6 +148,7 @@ function upsertNote_(body) {
   const sheet = sheet_(NOTES_SHEET, headers);
   const existingRow = rowById_(sheet, body.note_id);
   const existing = existingRow > 0 ? rowsAsObjects_(sheet)[existingRow - 2] : {};
+  const editTypeById = latestEditTypes_();
   const record = {
     note_id: body.note_id,
     date: body.date || existing.date || '',
@@ -157,7 +158,7 @@ function upsertNote_(body) {
     product: body.product || existing.product || '',
     keywords: body.keywords || existing.keywords || '',
     status: body.status || existing.status || 'ongoing',
-    note_type: body.note_type || existing.note_type || 'synthesis',
+    note_type: body.note_type || existing.note_type || editTypeById[body.note_id] || '',
     archived: String(Boolean(body.archived)),
     updated_at: body.updated_at || new Date().toISOString()
   };
@@ -170,9 +171,10 @@ function upsertEdit_(body) {
   const headers = editHeaders_();
   const sheet = sheet_(EDITS_SHEET, headers);
   const existingRow = rowById_(sheet, body.note_id);
+  const existing = existingRow > 0 ? rowsAsObjects_(sheet)[existingRow - 2] : {};
   const record = {
     note_id: body.note_id,
-    note_type: body.note_type || (body.payload && body.payload.note_type) || 'synthesis',
+    note_type: body.note_type || (body.payload && body.payload.note_type) || existing.note_type || '',
     payload: JSON.stringify(body.payload || {}),
     updated_at: body.updated_at || new Date().toISOString()
   };
@@ -199,9 +201,11 @@ function upsertStatus_(body) {
 
 function listNotes_(includeArchived) {
   const sheet = sheet_(NOTES_SHEET, noteHeaders_());
+  const editTypeById = latestEditTypes_();
   const latest = {};
   rowsAsObjects_(sheet).forEach(row => {
     if (!row.note_id) return;
+    if (!row.note_type && editTypeById[row.note_id]) row.note_type = editTypeById[row.note_id];
     const previous = latest[row.note_id];
     if (!previous || String(row.updated_at || '').localeCompare(String(previous.updated_at || '')) >= 0) {
       latest[row.note_id] = row;
@@ -210,6 +214,30 @@ function listNotes_(includeArchived) {
   return Object.values(latest)
     .filter(row => includeArchived || String(row.archived).toLowerCase() !== 'true')
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+}
+
+function latestEditTypes_() {
+  const sheet = sheet_(EDITS_SHEET, editHeaders_());
+  const latest = {};
+  rowsAsObjects_(sheet).forEach(row => {
+    if (!row.note_id) return;
+    let payload = {};
+    try {
+      payload = JSON.parse(row.payload || '{}');
+    } catch (error) {
+      payload = {};
+    }
+    const noteType = row.note_type || payload.note_type || '';
+    if (!noteType) return;
+    const previous = latest[row.note_id];
+    if (!previous || String(row.updated_at || '').localeCompare(String(previous.updated_at || '')) >= 0) {
+      latest[row.note_id] = { note_type: noteType, updated_at: row.updated_at || '' };
+    }
+  });
+  return Object.keys(latest).reduce((acc, noteId) => {
+    acc[noteId] = latest[noteId].note_type;
+    return acc;
+  }, {});
 }
 
 function getEdit_(noteId) {
@@ -225,7 +253,7 @@ function getEdit_(noteId) {
   } catch (error) {
     payload = {};
   }
-  return { note_id: row.note_id, note_type: row.note_type || payload.note_type || 'synthesis', payload, updated_at: row.updated_at };
+  return { note_id: row.note_id, note_type: row.note_type || payload.note_type || '', payload, updated_at: row.updated_at };
 }
 
 function listStatus_() {

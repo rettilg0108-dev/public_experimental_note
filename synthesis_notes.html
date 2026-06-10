@@ -559,8 +559,7 @@
     }
 
     function isSynthesisRow(row) {
-      const noteType = String(row.note_type || "").trim().toLowerCase();
-      return !noteType || noteType === "synthesis";
+      return String(row.note_type || "").trim().toLowerCase() === "synthesis";
     }
 
     function createDynamicNote(row) {
