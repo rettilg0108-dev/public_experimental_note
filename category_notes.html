@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>Experimental Note Category</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --soft:#eaf3f7; --danger:#8a2430; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--bg); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; line-height:1.55; -webkit-text-size-adjust:100%; }
+    .wrap { width:min(980px, calc(100% - 32px)); margin:32px auto; }
+    header,.note,.empty { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header { border-top:5px solid var(--accent); padding:26px 28px; margin-bottom:16px; }
+    h1 { margin:0 0 6px; font-size:28px; letter-spacing:0; }
+    h2 { margin:18px 0 10px; font-size:18px; letter-spacing:0; }
+    .lead,.muted { color:var(--muted); font-size:14px; }
+    .tools { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0; }
+    input,button,.button { border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:inherit; background:#fff; }
+    input[type="search"] { flex:1 1 280px; min-width:180px; }
+    button,.button { width:auto; cursor:pointer; color:var(--accent); text-decoration:none; font-weight:750; display:inline-flex; align-items:center; justify-content:center; }
+    button:hover,.button:hover { border-color:var(--accent); }
+    .button.primary { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .list { display:grid; gap:10px; }
+    .note { display:grid; grid-template-columns:112px 1fr; gap:4px 16px; padding:16px 18px; cursor:pointer; }
+    .note:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(20,35,50,.07); }
+    .date { grid-row:span 4; color:var(--accent); font-weight:800; font-variant-numeric:tabular-nums; }
+    .title { color:inherit; font-weight:800; font-size:16px; }
+    .subtitle { color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+    .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .status,.tag { display:inline-flex; align-items:center; min-height:22px; padding:2px 8px; border-radius:999px; font-size:12px; background:var(--soft); color:#28546a; }
+    .tag { background:#f4f6f8; color:var(--muted); }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .actions button { min-height:34px; padding:6px 10px; }
+    .empty { padding:14px 16px; color:var(--muted); border-style:dashed; }
+    .toast { position:fixed; left:50%; bottom:18px; z-index:30; transform:translateX(-50%); padding:9px 12px; color:#fff; background:rgba(31,41,51,.94); border-radius:6px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .15s ease; }
+    .toast.show { opacity:1; }
+    footer { margin-top:18px; color:var(--muted); font-size:12px; }
+    @media (max-width:640px) {
+      .wrap { width:100%; margin:0; }
+      header { border-left:0; border-right:0; border-radius:0; }
+      .tools,.section,footer { margin-left:16px; margin-right:16px; }
+      .note { grid-template-columns:1fr; }
+      .date { grid-row:auto; }
+      .tools > *, .actions > * { flex:1 1 auto; justify-content:center; min-height:44px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="page-title">Experimental Notes</h1>
+      <p class="lead" id="page-lead"></p>
+    </header>
+    <div class="tools">
+      <a class="button" href="index.html">入口</a>
+      <input id="search" type="search" placeholder="Search by date, title, keyword..." aria-label="Search notes">
+      <button type="button" id="reload">Sheets再読込</button>
+      <a class="button primary" id="new-note" href="#">新規ノート</a>
+    </div>
+    <section class="section">
+      <h2>進行中</h2>
+      <div class="list" id="ongoing"></div>
+      <div class="empty" id="ongoing-empty" hidden>進行中のノートはありません。</div>
+    </section>
+    <section class="section">
+      <h2>終了・アーカイブ</h2>
+      <div class="list" id="closed"></div>
+      <div class="empty" id="closed-empty" hidden>終了・アーカイブ済みノートはありません。</div>
+    </section>
+    <footer>noindex / nofollow</footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const params = new URLSearchParams(location.search);
+    const type = (params.get("type") || "optical").toLowerCase();
+    const configs = {
+      optical: {
+        title:"光学分析用実験ノート",
+        lead:"吸光、蛍光、光音響、lot/溶媒/測定条件ごとの代表値を管理します。",
+        newLabel:"新規光学分析ノート",
+        newHref:"optical_dynamic_note_app/index.html"
+      },
+      cell: {
+        title:"細胞実験ノート",
+        lead:"細胞種、培養条件、処理条件、測定イベント、結果解釈を管理します。",
+        newLabel:"新規細胞実験ノート",
+        newHref:"bio_dynamic_note_app/index.html?type=cell"
+      },
+      animal: {
+        title:"動物実験ノート",
+        lead:"倫理番号、群・個体、投与条件、観察イベント、結果解釈を管理します。",
+        newLabel:"新規動物実験ノート",
+        newHref:"bio_dynamic_note_app/index.html?type=animal"
+      }
+    };
+    const config = configs[type] || configs.optical;
+    const endpoint = () => localStorage.getItem(ENDPOINT_KEY) || "";
+    const ongoing = document.getElementById("ongoing");
+    const closed = document.getElementById("closed");
+    const search = document.getElementById("search");
+    const toast = document.getElementById("toast");
+    let rows = [];
+    let timer = null;
+    document.title = config.title;
+    document.getElementById("page-title").textContent = config.title;
+    document.getElementById("page-lead").textContent = config.lead;
+    document.getElementById("new-note").textContent = config.newLabel;
+    document.getElementById("new-note").href = config.newHref;
+    function showToast(text){ toast.textContent=text; toast.classList.add("show"); clearTimeout(timer); timer=setTimeout(()=>toast.classList.remove("show"),1800); }
+    function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+    function jsonp(params, cb) {
+      const url = endpoint();
+      if (!url) { showToast("入口でApps Script URLを設定してください"); return; }
+      const name = "categoryCb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      let done = false;
+      window[name] = data => { done = true; cb(data); script.remove(); delete window[name]; };
+      script.onerror = () => { done = true; showToast("Sheets読込失敗"); delete window[name]; };
+      script.src = url + "?" + new URLSearchParams({...params, callback:name, _:Date.now()}).toString();
+      document.body.append(script);
+      setTimeout(() => { if (done) return; showToast("Sheets読込タイムアウト"); script.remove(); delete window[name]; }, 9000);
+    }
+    async function post(body) {
+      const url = endpoint();
+      if (!url) throw new Error("入口でApps Script URLを設定してください");
+      await fetch(url, {method:"POST", mode:"no-cors", body:JSON.stringify(body)});
+    }
+    function editorHref(row) {
+      if (type === "optical") return "optical_dynamic_note_app/index.html?note_id=" + encodeURIComponent(row.note_id);
+      return "bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&note_id=" + encodeURIComponent(row.note_id);
+    }
+    function duplicateHref(row) {
+      if (type === "optical") return "optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(row.note_id);
+      return "bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&duplicate_from=" + encodeURIComponent(row.note_id);
+    }
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      ongoing.innerHTML = "";
+      closed.innerHTML = "";
+      const filtered = rows.filter(row => !q || [row.date,row.title,row.subtitle,row.method,row.product,row.keywords,row.status].join(" ").toLowerCase().includes(q));
+      for (const row of filtered) {
+        const archived = String(row.archived || "").toLowerCase() === "true";
+        const done = archived || row.status === "completed";
+        const article = document.createElement("article");
+        article.className = "note";
+        article.innerHTML = `
+          <div class="date">${escapeHtml(row.date || "")}</div>
+          <div class="title">${escapeHtml(row.title || "(untitled)")}</div>
+          <div class="subtitle">${escapeHtml(row.subtitle || "")}</div>
+          <div class="row"><span class="status">${done ? "終了" : "進行中"}</span>${String(row.keywords || "").split(",").filter(Boolean).slice(0,5).map(tag=>`<span class="tag">${escapeHtml(tag.trim())}</span>`).join("")}</div>
+          <div class="actions">
+            <a class="button" href="${editorHref(row)}">開く</a>
+            <a class="button" href="${duplicateHref(row)}">複製</a>
+            <button type="button" data-delete="${escapeHtml(row.note_id)}">削除</button>
+          </div>`;
+        article.addEventListener("click", event => {
+          if (event.target.closest("a,button")) return;
+          location.href = editorHref(row);
+        });
+        article.querySelector("[data-delete]").addEventListener("click", async event => {
+          event.stopPropagation();
+          if (!confirm("このノートを一覧から削除しますか？Sheets上ではarchived扱いになります。")) return;
+          await post({kind:"note", ...row, note_type:type, archived:true, updated_at:new Date().toISOString()});
+          showToast("削除リクエストを送信しました");
+          setTimeout(loadRows, 1200);
+        });
+        (done ? closed : ongoing).append(article);
+      }
+      document.getElementById("ongoing-empty").hidden = Boolean(ongoing.children.length);
+      document.getElementById("closed-empty").hidden = Boolean(closed.children.length);
+    }
+    function loadRows() {
+      jsonp({kind:"notes", include_archived:"1"}, data => {
+        rows = (Array.isArray(data) ? data : []).filter(row => row.note_type === type);
+        rows.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+        render();
+        showToast("Sheetsから読み込みました");
+      });
+    }
+    document.getElementById("reload").addEventListener("click", loadRows);
+    search.addEventListener("input", render);
+    loadRows();
+  </script>
+</body>
+</html>

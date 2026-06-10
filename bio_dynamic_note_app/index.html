@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>Biology Experimental Note</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#647282; --line:#d7dde5; --panel:#fff; --accent:#245c7a; --bg:#eef2f5; --danger:#8a2430; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP","Segoe UI",sans-serif; font-size:16px; line-height:1.58; -webkit-text-size-adjust:100%; }
+    .wrap { width:min(1120px, calc(100% - 28px)); margin:24px auto; display:grid; gap:14px; }
+    header,.panel,.event-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    header { border-top:5px solid var(--accent); padding:22px 24px; }
+    h1 { margin:0 0 6px; font-size:25px; }
+    h2 { margin:0 0 10px; font-size:18px; }
+    h3 { margin:0 0 8px; font-size:15px; }
+    .muted,.msg { color:var(--muted); font-size:13px; }
+    .msg { min-height:20px; overflow-wrap:anywhere; }
+    .panel { padding:18px; display:grid; gap:18px; }
+    section { display:grid; gap:10px; }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .wide { grid-column:1 / -1; }
+    label { display:grid; gap:5px; color:var(--muted); font-size:14px; font-weight:650; }
+    input,textarea,select,button { width:100%; border:1px solid var(--line); border-radius:6px; padding:10px 11px; font:inherit; font-size:16px; line-height:1.4; background:#fff; color:var(--ink); }
+    textarea { min-height:88px; resize:none; overflow:hidden; }
+    button { width:auto; color:var(--accent); font-weight:750; cursor:pointer; }
+    button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    button.danger { color:var(--danger); border-color:#e2b9c0; background:#fff8f9; }
+    button:disabled { opacity:.62; cursor:wait; }
+    a { color:var(--accent); font-weight:750; text-decoration:none; }
+    .row,.actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .actions { justify-content:flex-end; }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th,td { border:1px solid var(--line); padding:7px; vertical-align:top; }
+    th { background:#f6f8fa; color:var(--muted); font-size:13px; text-align:left; }
+    td input,td select,td textarea { border:0; padding:6px; min-width:92px; }
+    .event-list { display:grid; gap:10px; }
+    .event-card { overflow:hidden; }
+    .event-head { display:grid; grid-template-columns:130px 1fr 1fr auto; gap:8px; align-items:end; padding:10px 12px; background:#f6f8fa; border-bottom:1px solid var(--line); }
+    .event-body { padding:14px; display:grid; gap:12px; }
+    @media (max-width:820px) {
+      .wrap { width:100%; margin:0; }
+      header { border-left:0; border-right:0; border-radius:0; padding:22px 18px; }
+      .panel { border-left:0; border-right:0; border-radius:0; padding:18px 16px; gap:20px; }
+      h1 { font-size:24px; }
+      h2 { font-size:20px; }
+      h3 { font-size:18px; }
+      .grid,.event-head { grid-template-columns:1fr; }
+      .row button,.row a,.actions button { flex:1 1 auto; min-height:44px; text-align:center; justify-content:center; }
+      input,textarea,select,button { min-height:44px; }
+      table,thead,tbody,tr,th,td { display:block; width:100%; }
+      thead { display:none; }
+      tr { border:1px solid var(--line); border-radius:8px; padding:10px; margin:10px 0; background:#fff; }
+      td { border:0; padding:7px 0; }
+      td::before { content:attr(data-label); display:block; margin-bottom:4px; color:var(--muted); font-size:13px; font-weight:700; }
+      td:last-child::before { display:none; }
+      td input,td select,td textarea { border:1px solid var(--line); border-radius:6px; padding:10px 11px; min-width:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="pageTitle">Biology Experimental Note</h1>
+      <p class="muted" id="pageLead"></p>
+      <div class="row"><a id="categoryLink" href="../category_notes.html">一覧</a><a href="../index.html">入口</a></div>
+      <div class="msg" id="msg"></div>
+    </header>
+    <main class="panel">
+      <section>
+        <h2>実験概要</h2>
+        <div class="grid">
+          <label>作成日<input id="date" type="date"></label>
+          <label class="wide">project<input id="project"></label>
+          <label class="wide">experiment title<input id="experimentTitle"></label>
+          <label class="wide">purpose<input id="purpose"></label>
+          <label>operator<input id="operator" value="土屋光輝"></label>
+          <label>keywords<input id="keywords"></label>
+        </div>
+      </section>
+      <section>
+        <h2 id="profileTitle">基本条件</h2>
+        <table id="profileTable">
+          <thead><tr><th>item</th><th>value</th><th>note</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="actions"><button id="addProfile" type="button">行を追加</button></div>
+      </section>
+      <section>
+        <h2 id="conditionTitle">条件</h2>
+        <table id="conditionTable">
+          <thead><tr><th>condition</th><th>sample / animal</th><th>treatment</th><th>dose / concentration</th><th>time</th><th>note</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="actions"><button id="addCondition" type="button">条件を追加</button></div>
+      </section>
+      <section>
+        <h2>timeline events</h2>
+        <div class="event-list" id="eventList"></div>
+        <div class="actions"><button id="addEvent" type="button">event追加</button><button id="duplicateEvent" type="button">最後のeventを複製</button></div>
+      </section>
+      <section>
+        <h2>結果・解釈</h2>
+        <div class="grid">
+          <label class="wide">result summary<textarea id="resultSummary"></textarea></label>
+          <label class="wide">next action<textarea id="nextAction"></textarea></label>
+          <label class="wide">raw data / figure links<textarea id="links"></textarea></label>
+          <label class="wide">memo<textarea id="memo"></textarea></label>
+        </div>
+      </section>
+      <div class="row">
+        <button class="primary" id="saveNote" type="button">Save to Sheets</button>
+        <button id="archiveNote" type="button">アーカイブ</button>
+      </div>
+    </main>
+  </div>
+  <script>
+    const ENDPOINT_KEY = "experimental-note-sheets-test-endpoint:v1";
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type") === "animal" ? "animal" : "cell";
+    const requestedNoteId = params.get("note_id");
+    const duplicateFromId = params.get("duplicate_from");
+    const state = { currentId:"" };
+    const cfg = {
+      cell: {
+        pageTitle:"Cell Experiment Note",
+        lead:"細胞種、培養条件、処理条件、測定イベント、結果解釈を保存します。",
+        method:"Cell experiment",
+        profileTitle:"細胞・培養条件",
+        conditionTitle:"処理条件",
+        keywords:"cell, culture, assay",
+        project:"NIR dye cell response / imaging assay",
+        title:"cellular uptake and response screening",
+        purpose:"細胞内取り込み、蛍光/PA応答、毒性の初期確認",
+        profile:[["cell line","HeLa / 4T1 / RAW264.7",""],["passage","P12",""],["medium","DMEM + 10% FBS",""],["incubator","37 C, 5% CO2",""],["confluency","70-80%",""],["contamination check","clear",""]],
+        conditions:[["vehicle","cells","DMSO only","0.1% DMSO","24 h","negative control"],["sample","cells","compound","1-5 uM","24 h","imaging + viability"]],
+        events:[{date:"", kind:"seeding/treatment/imaging", time:"", text:"細胞状態、処理、観察、raw data folderを記録。"}]
+      },
+      animal: {
+        pageTitle:"Animal Experiment Note",
+        lead:"倫理番号、群・個体、投与条件、観察イベント、結果解釈を保存します。",
+        method:"Animal experiment",
+        profileTitle:"倫理・個体・飼育条件",
+        conditionTitle:"群・投与条件",
+        keywords:"animal, in vivo, imaging",
+        project:"NIR dye in vivo imaging / biodistribution",
+        title:"in vivo imaging pilot",
+        purpose:"投与後のシグナル推移と臓器分布の初期確認",
+        profile:[["approval / protocol No.","",""],["species / strain","mouse / BALB/c",""],["sex / age","F, 8 w",""],["housing","animal facility",""],["anesthesia","isoflurane",""],["humane endpoint","体重減少、行動異常、摂食低下など",""]],
+        conditions:[["vehicle","M01","vehicle","100 uL","single dose","control"],["sample","M02","compound","1 mg/kg","single dose","imaging"]],
+        events:[{date:"", kind:"dosing/imaging/observation", time:"", text:"投与、麻酔、画像、体重、異常所見、raw data folderを記録。"}]
+      }
+    }[type];
+    const q = s => document.querySelector(s);
+    function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
+    function localDateString(date = new Date()){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
+    function slug(v){ return String(v||"note").trim().toLowerCase().replace(/[^a-z0-9一-龯ぁ-んァ-ンー]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) || "note"; }
+    function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
+    function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+    let msgTimer = null;
+    function msg(text){ q("#msg").textContent=text; clearTimeout(msgTimer); if(text) msgTimer=setTimeout(()=>q("#msg").textContent="",5000); }
+    function post(body){ const url=endpoint(); if(!url) throw new Error("入口でApps Script URLを設定してください"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
+    function jsonp(params, cb){
+      const url=endpoint(); if(!url){ msg("入口でApps Script URLを設定してください"); return; }
+      const name="bioCb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      const script=document.createElement("script");
+      let done=false;
+      window[name]=data=>{ done=true; cb(data); script.remove(); delete window[name]; };
+      script.onerror=()=>{ done=true; msg("Sheets読込失敗"); delete window[name]; };
+      script.src=url+"?"+new URLSearchParams({...params,callback:name,_:Date.now()}).toString();
+      document.body.append(script);
+      setTimeout(()=>{ if(done) return; msg("Sheets読込タイムアウト"); script.remove(); delete window[name]; },9000);
+    }
+    function blankNote(){
+      return {note_type:type, note_id:"", date:localDateString(), project:cfg.project, experimentTitle:cfg.title, purpose:cfg.purpose, operator:"土屋光輝", keywords:cfg.keywords, profile:cfg.profile.map(([item,value,note])=>({item,value,note})), conditions:cfg.conditions.map(([condition,sample,treatment,dose,time,note])=>({condition,sample,treatment,dose,time,note})), events:cfg.events.map(event=>({...event, date:localDateString()})), resultSummary:"", nextAction:"", links:"", memo:""};
+    }
+    function noteTitle(){ return `${cfg.method}: ${q("#experimentTitle").value || "untitled"}`; }
+    function noteId(){ return [q("#date").value || localDateString(), type, slug(q("#experimentTitle").value)].join("-") + "-" + Math.random().toString(36).slice(2,5); }
+    function renderRows(table, rows, keys){
+      table.querySelector("tbody").innerHTML = (rows||[]).map(row => `<tr>${keys.map(key=>`<td data-label="${escapeAttr(key)}"><input data-key="${escapeAttr(key)}" value="${escapeAttr(row[key])}"></td>`).join("")}<td><button type="button" class="delete-row danger">削除</button></td></tr>`).join("");
+    }
+    function readRows(table, keys){ return [...table.querySelectorAll("tbody tr")].map(row => Object.fromEntries(keys.map(key => [key, row.querySelector(`[data-key="${key}"]`)?.value || ""]))); }
+    function renderEvents(rows){
+      q("#eventList").innerHTML = (rows||[]).map(event => `<article class="event-card">
+        <div class="event-head">
+          <label>date<input data-event="date" type="date" value="${escapeAttr(event.date)}"></label>
+          <label>event<input data-event="kind" value="${escapeAttr(event.kind)}"></label>
+          <label>time / timepoint<input data-event="time" value="${escapeAttr(event.time)}"></label>
+          <button type="button" class="delete-event danger">削除</button>
+        </div>
+        <div class="event-body">
+          <label>operation / observation<textarea data-event="text">${escapeText(event.text)}</textarea></label>
+        </div>
+      </article>`).join("");
+      autosizeAll();
+    }
+    function readEvents(){ return [...q("#eventList").querySelectorAll(".event-card")].map(card => Object.fromEntries([...card.querySelectorAll("[data-event]")].map(el => [el.dataset.event, el.value]))); }
+    function collect(){
+      const data = {note_type:type, note_id:state.currentId || noteId(), date:q("#date").value, project:q("#project").value, experimentTitle:q("#experimentTitle").value, purpose:q("#purpose").value, operator:q("#operator").value, keywords:q("#keywords").value, profile:readRows(q("#profileTable"),["item","value","note"]), conditions:readRows(q("#conditionTable"),["condition","sample","treatment","dose","time","note"]), events:readEvents(), resultSummary:q("#resultSummary").value, nextAction:q("#nextAction").value, links:q("#links").value, memo:q("#memo").value};
+      data.title = noteTitle();
+      data.subtitle = [data.project, data.purpose].filter(Boolean).join(" / ");
+      data.method = cfg.method;
+      data.product = data.experimentTitle;
+      data.status = "ongoing";
+      return data;
+    }
+    function setEditor(data){
+      const note = {...blankNote(), ...data};
+      state.currentId = note.note_id || "";
+      ["date","project","experimentTitle","purpose","operator","keywords","resultSummary","nextAction","links","memo"].forEach(id => q("#"+id).value = note[id] || "");
+      renderRows(q("#profileTable"), note.profile, ["item","value","note"]);
+      renderRows(q("#conditionTable"), note.conditions, ["condition","sample","treatment","dose","time","note"]);
+      renderEvents(note.events);
+      document.title = note.title || noteTitle();
+      q("#pageTitle").textContent = note.title || noteTitle();
+      autosizeAll();
+    }
+    function loadNoteById(id, duplicate=false){
+      jsonp({kind:"edit", note_id:id}, rec => {
+        if (!rec?.payload) return msg("指定ノートが見つかりません");
+        const payload = {...rec.payload};
+        if (duplicate) { payload.note_id = ""; payload.date = localDateString(); payload.status = "ongoing"; }
+        setEditor(payload);
+        msg(duplicate ? "複製元を読み込みました" : "読み込みました");
+      });
+    }
+    function verifySaved(id, token, attempt=1){
+      jsonp({kind:"edit", note_id:id}, rec => {
+        if (rec?.payload?._save_token === token) { setEditor(rec.payload); msg("保存確認OK: Sheetsから読み直しました"); return; }
+        if (attempt < 6) { msg("保存反映待ち... " + attempt + "/6"); setTimeout(()=>verifySaved(id, token, attempt + 1), 1600); return; }
+        msg("保存確認NG: Apps Script URL/デプロイ先/Sheetを確認してください。");
+      });
+    }
+    async function saveCurrent(){
+      const button = q("#saveNote"), old = button.textContent;
+      button.disabled = true; button.textContent = "Saving..."; msg("Sheetsへ保存リクエストを送信中...");
+      const data = collect();
+      data._save_token = Date.now() + "-" + Math.random().toString(36).slice(2);
+      state.currentId = data.note_id;
+      try {
+        await post({kind:"note", note_id:data.note_id, date:data.date, title:data.title, subtitle:data.subtitle, method:data.method, product:data.product, keywords:data.keywords, status:"ongoing", note_type:type, archived:false, updated_at:new Date().toISOString()});
+        await post({kind:"edit", note_id:data.note_id, note_type:type, payload:data, updated_at:new Date().toISOString()});
+        history.replaceState(null, "", "?type=" + encodeURIComponent(type) + "&note_id=" + encodeURIComponent(data.note_id));
+        msg("保存リクエストを送りました。Sheetsから読み直します。");
+        setTimeout(() => verifySaved(data.note_id, data._save_token), 1500);
+      } finally { button.disabled = false; button.textContent = old; }
+    }
+    function autosizeAll(){ document.querySelectorAll("textarea").forEach(t=>{ t.style.height="auto"; t.style.height=t.scrollHeight+2+"px"; }); }
+    q("#pageTitle").textContent = cfg.pageTitle;
+    q("#pageLead").textContent = cfg.lead;
+    q("#categoryLink").href = "../category_notes.html?type=" + encodeURIComponent(type);
+    q("#profileTitle").textContent = cfg.profileTitle;
+    q("#conditionTitle").textContent = cfg.conditionTitle;
+    q("#saveNote").onclick = () => saveCurrent().catch(error => msg(error.message));
+    q("#archiveNote").onclick = async () => { const data=collect(); await post({kind:"note", ...data, note_type:type, archived:true, updated_at:new Date().toISOString()}); msg("アーカイブしました"); };
+    q("#addProfile").onclick = () => renderRows(q("#profileTable"), [...readRows(q("#profileTable"),["item","value","note"]), {item:"",value:"",note:""}], ["item","value","note"]);
+    q("#addCondition").onclick = () => renderRows(q("#conditionTable"), [...readRows(q("#conditionTable"),["condition","sample","treatment","dose","time","note"]), {condition:"",sample:"",treatment:"",dose:"",time:"",note:""}], ["condition","sample","treatment","dose","time","note"]);
+    q("#addEvent").onclick = () => renderEvents([...readEvents(), {date:localDateString(), kind:"", time:"", text:""}]);
+    q("#duplicateEvent").onclick = () => { const rows=readEvents(); renderEvents([...rows, {...(rows.at(-1)||{date:localDateString(),kind:"",time:"",text:""}), kind:(rows.at(-1)?.kind || "event") + " copy"}]); };
+    document.addEventListener("click", e => {
+      if (e.target.closest(".delete-row")) e.target.closest("tr").remove();
+      if (e.target.closest(".delete-event") && confirm("このeventを削除しますか？")) e.target.closest(".event-card").remove();
+    });
+    document.addEventListener("input", e => {
+      if (e.target.matches("textarea")) autosizeAll();
+      if (e.target.matches("#experimentTitle")) q("#pageTitle").textContent = noteTitle();
+    });
+    if (requestedNoteId) loadNoteById(requestedNoteId);
+    else if (duplicateFromId) loadNoteById(duplicateFromId, true);
+    else setEditor(blankNote());
+  </script>
+</body>
+</html>
