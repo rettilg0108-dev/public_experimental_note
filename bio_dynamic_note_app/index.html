@@ -191,7 +191,7 @@
       if(text){
         sync.classList.add("show");
         clearTimeout(syncTimer);
-        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),3000);
+        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),5000);
       }
     }
     function post(body){ const url=endpoint(); if(!url) throw new Error("入口でApps Script URLを設定してください"); return fetch(url,{method:"POST",mode:"no-cors",body:JSON.stringify(body)}); }
@@ -204,7 +204,7 @@
       script.onerror=()=>{ done=true; msg("Sheets読込失敗"); delete window[name]; };
       script.src=url+"?"+new URLSearchParams({...params,callback:name,_:Date.now()}).toString();
       document.body.append(script);
-      setTimeout(()=>{ if(done) return; msg("Sheets読込タイムアウト"); script.remove(); delete window[name]; },9000);
+      setTimeout(()=>{ if(done) return; msg("Sheets読込タイムアウト"); script.remove(); delete window[name]; },20000);
     }
     function blankNote(){
       return {note_type:type, note_id:"", date:localDateString(), project:cfg.project, experimentTitle:cfg.title, purpose:cfg.purpose, operator:"土屋光輝", keywords:cfg.keywords, profile:cfg.profile.map(([item,value,note])=>({item,value,note})), conditions:cfg.conditions.map(([condition,sample,treatment,dose,time,note])=>({condition,sample,treatment,dose,time,note})), events:cfg.events.map(event=>({...event, date:localDateString()})), resultSummary:"", nextAction:"", links:"", memo:""};

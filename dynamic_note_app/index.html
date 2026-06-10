@@ -192,7 +192,7 @@
       if(text) {
         sync.classList.add("show");
         clearTimeout(syncTimer);
-        if(!sync.classList.contains("busy")) syncTimer = setTimeout(() => sync.classList.remove("show"), 3000);
+        if(!sync.classList.contains("busy")) syncTimer = setTimeout(() => sync.classList.remove("show"), 5000);
       }
     };
     const state = { notes: [], currentId: "" };
@@ -301,7 +301,7 @@
         msg("Sheets読込タイムアウト。入口のURL確認、Apps Script公開設定、最新版デプロイを確認してください。");
         script.remove();
         delete window[name];
-      }, 9000);
+      }, 20000);
     }
     function renderList(){
       return state.notes.map(n => `<article class="note-card ${n.note_id===state.currentId?"active":""}" data-id="${n.note_id}">

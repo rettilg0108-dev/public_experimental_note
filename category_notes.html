@@ -186,7 +186,7 @@
       syncStatus.classList.toggle("busy", busy);
       syncStatus.classList.add("show");
       clearTimeout(syncStatus._timer);
-      if(!busy) syncStatus._timer=setTimeout(()=>syncStatus.classList.remove("show"),2600);
+      if(!busy) syncStatus._timer=setTimeout(()=>syncStatus.classList.remove("show"),5000);
     }
     function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
     function today(){
@@ -214,7 +214,7 @@
       script.onerror = () => { done = true; showToast("Sheets読込失敗"); showSync("Sheets読込失敗"); delete window[name]; };
       script.src = url + "?" + new URLSearchParams({...params, callback:name, _:Date.now()}).toString();
       document.body.append(script);
-      setTimeout(() => { if (done) return; showToast("Sheets読込タイムアウト"); showSync("Sheets読込タイムアウト"); script.remove(); delete window[name]; }, 9000);
+      setTimeout(() => { if (done) return; showToast("Sheets読込タイムアウト"); showSync("Sheets読込タイムアウト"); script.remove(); delete window[name]; }, 20000);
     }
     async function post(body) {
       const url = endpoint();

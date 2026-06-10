@@ -232,7 +232,7 @@
       if(text){
         sync.classList.add("show");
         clearTimeout(syncTimer);
-        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),3000);
+        if(!sync.classList.contains("busy")) syncTimer=setTimeout(()=>sync.classList.remove("show"),5000);
       }
     }
     function endpoint(){ return localStorage.getItem(ENDPOINT_KEY) || ""; }
@@ -452,7 +452,7 @@
         msg("Sheets読込タイムアウト。入口のURL確認、Apps Script公開設定、最新版デプロイを確認してください。");
         script.remove();
         delete window[name];
-      }, 9000);
+      }, 20000);
     }
     function escapeAttr(v){ return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;"); }
     function escapeText(v){ return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
