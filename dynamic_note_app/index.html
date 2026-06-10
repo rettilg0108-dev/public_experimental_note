@@ -325,13 +325,21 @@
       const memo = String(data.memo || "").includes("リンモリブデン酸") ? data.memo : [data.memo, LITHIATION_NOTE_PATCH.memo].filter(Boolean).join("\n");
       return {...data, images, analysis, memo};
     }
+    function typedEditorHref(noteType, paramName, noteId) {
+      const type = String(noteType || "synthesis").trim().toLowerCase();
+      const idParam = paramName + "=" + encodeURIComponent(noteId);
+      if (type === "optical") return "../optical_dynamic_note_app/index.html?" + idParam;
+      if (type === "cell" || type === "animal") return "../bio_dynamic_note_app/index.html?type=" + encodeURIComponent(type) + "&" + idParam;
+      return "";
+    }
     function loadNoteById(noteId, options = {}) {
       if (!noteId) return;
       msg("Sheets保存済みノートを読み込み中...");
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
-          if (rec.payload.note_type === "optical") {
-            location.replace("../optical_dynamic_note_app/index.html?note_id=" + encodeURIComponent(noteId));
+          const typedHref = typedEditorHref(rec.payload.note_type, "note_id", noteId);
+          if (typedHref) {
+            location.replace(typedHref);
             return;
           }
           if (options.expectSaved && options.saveToken && rec.payload._save_token !== options.saveToken) {
@@ -371,8 +379,9 @@
       msg("複製元を読み込み中...");
       jsonp({kind:"edit", note_id: noteId}, rec => {
         if (rec?.payload) {
-          if (rec.payload.note_type === "optical") {
-            location.replace("../optical_dynamic_note_app/index.html?duplicate_from=" + encodeURIComponent(noteId));
+          const typedHref = typedEditorHref(rec.payload.note_type, "duplicate_from", noteId);
+          if (typedHref) {
+            location.replace(typedHref);
             return;
           }
           setEditor(asDuplicate(hydrateKnownNote(rec.payload)));
